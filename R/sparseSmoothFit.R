@@ -1,26 +1,20 @@
 sparseSmoothFit <- function(dat, n.k, stepSize=0.1,lambda1=0.002, lambda2=0.1, maxInt = 500,
-                            maxInt_lineSearch = 10, epsilon = 1E-6, printDetail = TRUE, initTheta, shrinkScale=0.5,
+                            epsilon = 1E-6, printDetail = TRUE, initTheta, shrinkScale=0.5,
                             accelrt = TRUE){
   
   # Insert some checks later
   
-  out0 <- smoothConstructExtract(n.k, dat$Position, constrains = T)
-  out1 <- smoothConstructExtract(n.k, dat$Position, constrains = F)
-  
-  basisMat0 <- out0$basisMat
-  basisMat1 <- out1$basisMat
-  smoOmega1 <- out1$smoothOmegaCr
-  sparOmega <- sparseOmegaCr(out1$myh, n.k, out1$matF) # the same for both intercept and non_intercept # Call a RCpp function
-  
-  numCovs <- ncol(dat) - 4
-  designMat1 <- extractDesignMat1(numCovs, basisMat1, dat)
+  initOut = extractMats(dat=dat,n.k=n.k)
   
   out = fitProxGrad(theta=initTheta, stepSize=stepSize,lambda1=lambda1,
-              dat=dat, basisMat0=basisMat0, basisMat1=basisMat1, n.k=n.k, sparOmega=sparOmega, lambda2=lambda2, smoOmega1=smoOmega1,
-              maxInt = maxInt,
-              maxInt_lineSearch = maxInt_lineSearch, epsilon = epsilon, printDetail = printDetail,shrinkScale=shrinkScale,
-              accelrt=accelrt, numCovs, designMat1)
-  return(out)
+              dat=dat, basisMat0= initOut$basisMat0, n.k=n.k, sparOmega= initOut$sparOmega, lambda2=lambda2, smoOmega1=initOut$smoOmega1,
+              maxInt = maxInt, epsilon = epsilon, printDetail = printDetail,shrinkScale=shrinkScale,
+              accelrt=accelrt, numCovs=initOut$numCovs, designMat1= initOut$designMat1)
+  zeroCovs <- unlist(lapply(out$thetaEstSep[-1], function(x){all(x==0)}))
+  return(c(out, list(basisMat0=initOut$basisMat0, basisMat1=initOut$basisMat0basisMat1,designMat1=initOut$basisMat0designMat1, 
+                     lossSum = apply(out$lossVals, 1, sum),
+                     nzeros = sum(!nzeros),
+                     nzeroCovs = colnames(dat)[-c(1:4)][which(!zeroCovs)])))
   
 }
 
@@ -32,7 +26,7 @@ smoothConstructExtract <- function(n.k, pos, constrains = FALSE){
     see1 = mgcv::smooth.construct(mgcv::s(pos, k = n.k,
                                           fx = F, bs = "cr"), data = data.frame(pos), knots = NULL)
     #see11= mgcv::smoothCon(mgcv::s(pos, k = n.k,
-    #                                      fx = F, bs = "cr"), data = data.frame(pos), knots = NULL)[[1]] # see1 and see11 gives the same x, but different S, S.scale
+    #                                     fx = F, bs = "cr"), data = data.frame(pos), knots = NULL)[[1]] # see1 and see11 gives the same x, but different S, S.scale
     myh <- see1$xp[-1]-see1$xp[-n.k]   # smooth.construct directly order the x values
     matF <- matrix(see1$F, byrow = T, nrow = n.k)
     smoothOmegaCr <- see1$S[[1]]
@@ -51,14 +45,14 @@ smoothConstructExtract <- function(n.k, pos, constrains = FALSE){
 }
 
 
-fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, basisMat1, n.k, sparOmega, lambda2, smoOmega1, maxInt = 1000,
-                        maxInt_lineSearch = 1000, epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1){
+fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, n.k, sparOmega, lambda2, smoOmega1, maxInt = 1000,
+                        epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1){
   
   
   Hp <- sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
   iter <- 1
 
-  out <- oneUpdate(theta, stepSize, lambda1, dat, basisMat0, basisMat1, n.k, Hp, maxInt_lineSearch, numCovs, shrinkScale, 
+  out <- oneUpdate(theta, stepSize, lambda1, dat, basisMat0, n.k, Hp,  numCovs, shrinkScale, 
                          designMat1,theta_m=theta, iter=iter, accelrt)
   
   penTerms <- twoPenalties(out$theta_l_proximal_sep, Hp, lambda1, numCovs, n.k)
@@ -71,8 +65,8 @@ fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, basisMat1, n.k,
     iter <- iter + 1
     theta_m <- theta
     theta <- out$theta_l_proximal  
-    out <- oneUpdate(theta, stepSize, lambda1, dat, basisMat0, basisMat1, n.k, Hp, maxInt_lineSearch, numCovs, shrinkScale, 
-                     designMat1,theta_m=theta_m, iter, accelrt)
+    out <- oneUpdate(theta, stepSize, lambda1, dat, basisMat0, n.k, Hp,  numCovs, shrinkScale, 
+                     designMat1,theta_m=theta_m, iter=iter, accelrt)
     
     penTerms <- twoPenalties(out$theta_l_proximal_sep, Hp, lambda1, numCovs, n.k)
     Est.points <- rbind(Est.points, out$theta_l_proximal)
@@ -89,7 +83,26 @@ fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, basisMat1, n.k,
               Est.points=Est.points, 
               geneGradL2=geneGradL2, 
               lossVals=lossVals, 
-              stepSizeVec = stepSizeVec))
+              stepSizeVec = stepSizeVec,
+              basisMat0 = basisMat0,
+              thetaEstSep = out$theta_l_proximal_sep))
   
 }
 
+extractMats <- function(dat, n.k){
+  out0 <- smoothConstructExtract(n.k, dat$Position, constrains = T)
+  out1 <- smoothConstructExtract(n.k, dat$Position, constrains = F)
+  
+  basisMat0 <- out0$basisMat
+  #basisMat0[,-1] <- scale(basisMat0[,-1])
+  basisMat1 <- out1$basisMat
+  smoOmega1 <- out1$smoothOmegaCr
+  sparOmega <- sparseOmegaCr(out1$myh, n.k, out1$matF)/nrow(dat)^2 # the same for both intercept and non_intercept # Call a RCpp function
+  
+  numCovs <- ncol(dat) - 4
+  designMat1 <- extractDesignMat1(numCovs, basisMat1, dat)
+  return(list(basisMat0=basisMat0,designMat1=designMat1,smoOmega1=smoOmega1,sparOmega=sparOmega,numCovs=numCovs))
+}
+
+
+  

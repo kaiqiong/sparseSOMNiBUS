@@ -11,20 +11,37 @@
 # extract design matrix for beta1(t), ... betap(t)
 
 extractDesignMat1 <- function(numCovs, basisMat1, dat ){
-  lapply(seq_len(numCovs), function(i){sweep(basisMat1, 1 ,dat[, paste0("X", i)], "*"  )})
+  lapply(seq_len(numCovs), function(i){(sweep(basisMat1, 1 ,dat[, paste0("X", i)], "*"  ))})
 }
 
 
-binomObject <- function(theta,basisMat0, basisMat1, dat, n.k,numCovs,designMat1){ 
+binomObject <- function(theta,basisMat0, dat, n.k,numCovs,designMat1, truncation = TRUE){ 
   
   # -2loglik for binomial
-  estimatePijOut <- estimatePij(theta=theta, basisMat0 = basisMat0, basisMat1 = basisMat1, dat=dat, n.k = n.k, numCovs)
+  estimatePijOut <- estimatePij(theta=theta, basisMat0 = basisMat0, designMat1 = designMat1, dat=dat, n.k = n.k, numCovs)
   pi_ij <- estimatePijOut$pi_ij
+  eps <- 10 * .Machine$double.eps
+  #if (any(pi_ij > 1 - eps) || any(pi_ij < eps)) 
+  #  message("fitted probabilities numerically 0 or 1 occurred")
+
+ if(truncation){
+   pi_ij[which(pi_ij > 1 - eps)] <- 1 - eps
+   pi_ij[which(pi_ij < eps)] <- eps
+ }
   theta.sep <- estimatePijOut$theta.sep
   
+
   loglik_ij <- dat$Meth_Counts * log(pi_ij) +(dat$Total_Counts-dat$Meth_Counts)*log(1-pi_ij)
   
-  neg2loglik <-  -2*sum(loglik_ij[is.finite(loglik_ij)])
+  #----------------------
+ # if(truncation){
+#    loglik_ij[!is.finite(loglik_ij)] <- -10^20
+#  }
+  #------------------------------
+  #-2*sum(dbinom(x=dat$Meth_Counts, prob=pi_ij, size=dat$Total_Counts, log=T))
+  neg2loglik <-  -2*sum(loglik_ij)
+  
+  
   
   # supplementary formula 4
   gPi_ij <- (dat$Meth_Counts - dat$Total_Counts*pi_ij) 
@@ -39,7 +56,7 @@ binomObject <- function(theta,basisMat0, basisMat1, dat, n.k,numCovs,designMat1)
   #basisMat1[2,] * dat[2, paste0("X", i)]
   gRest <- vapply(seq_len(numCovs), function(i){
     apply(sweep(designMat1[[i]], 1, gPi_ij, "*"), 2, sum)
-  }, rep(1, ncol(basisMat1)))
+  }, rep(1, ncol(designMat1[[1]])))
   
   gNeg2loglik <- -2*c(g0_now, as.vector(gRest))
   return(list(neg2loglik=neg2loglik, theta.sep = theta.sep,
@@ -54,7 +71,7 @@ getSeparateTheta <- function(theta, n.k, numCovs){
   return(theta.sep = theta.sep)
 }
 
-estimatePij <- function(theta,basisMat0, basisMat1, dat, n.k, numCovs){
+estimatePij <- function(theta,basisMat0, designMat1, dat, n.k, numCovs){
   
   if(length(theta)!= (n.k * (numCovs + 1))){
     message("length(theta) is unequal to n.k * (numCovs + 1)")
@@ -66,7 +83,7 @@ estimatePij <- function(theta,basisMat0, basisMat1, dat, n.k, numCovs){
     if(i ==1){
       basisMat0 %*%  theta.sep[[i]]
     }else{
-      (basisMat1 %*%  theta.sep[[i]]) *dat[, paste0("X", i-1)]
+      designMat1[[i-1]] %*%  theta.sep[[i]]
     }
   }, rep(1, nrow(dat))) # lp.sep = (beta0(t), beta1(t)*Z1, beta2(t) * Z2, ...)
   

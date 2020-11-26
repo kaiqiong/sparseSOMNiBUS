@@ -89,65 +89,31 @@ lambda1 = 140
 
 # transform the design matrix
 
-#--- calculate the choleski decomposition and inverse 
-L  = chol(Hp)
 
-all.equal(t(L)%*%L, Hp)
-
-Hinv = chol2inv(L)
-
-all.equal(Hinv, solve(Hp))
-
-library(microbenchmark)
-
-see = microbenchmark(solve = {
- solve(Hp)
-},
-chol ={
-
-  Hinv = chol2inv(chol(Hp))
-}
-, times = 100 )
-library(ggplot2)
-autoplot(see)
-see
-
-Linv = solve(L)
-
-Linv ==chol2inv(chol(L))
-
-#---- endo of test
 
 L  = chol(Hp)
 Hinv = chol2inv(L)
-Linv1 = chol2inv(chol(L))
 Linv = solve(L)
 basisMat0_tilda <- basisMat0 %*% Linv
 
 
 designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
 
-all.equal(designMat1_tilda[[1]], designMat1[[1]]%*%Linv)
-all.equal(designMat1_tilda[[2]], designMat1[[2]]%*%Linv)
-all.equal(designMat1_tilda[[3]], designMat1[[3]]%*%Linv)
-all.equal(designMat1_tilda[[4]], designMat1[[4]]%*%Linv)
 
-#seeinit= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0, n.k, Hp, maxInt = 10^5,
-#                     epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1, basisMat1, truncation)
 
 seeinit_correct_design= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
-                        epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda, Linv, truncation)
+                        epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda,  truncation)
 
-optimcheck(seeinit_correct_design,lambda1=lambda1, Hp,L, Linv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
+optimcheck(seeinit_correct_design,lambda1=lambda1, Hp,L, Linv,Hpinv=Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 #optimcheck(seeinit,lambda1=lambda1, Hp,L, Linv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 
 
 
 lambda1 = 130
-see2= fitProxGradCpp(seeinit_correct_design$thetaEstTilda, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
-                     epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda, Linv, truncation)
+see2= fitProxGradCpp(seeinit_correct_design$thetaEst, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
+                     epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda, truncation)
 
-optimcheck(see2,lambda1=lambda1, Hp,L, Linv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
+optimcheck(see2,lambda1=lambda1, Hp,L, Linv, Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 #lambda1 = 4
 #see2R= fitProxGrad(seeinit$thetaEst, stepSize,lambda1, dat, basisMat0, n.k, sparOmega, lambda2, smoOmega1, maxInt = 10^3,
 #                     epsilon = 1E-20, printDetail = F, shrinkScale,accelrt, numCovs, designMat1, basisMat1)

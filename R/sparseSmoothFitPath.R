@@ -100,21 +100,21 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   checkall <- matrix(NA, nrow = nlam, ncol = numCovs)
   fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat, basisMat0_tilda, n.k,Hp,
                          maxInt, epsilon, shrinkScale,
-                         accelrt, numCovs, designMat1_tilda, Linv, truncation)
+                         accelrt, numCovs, designMat1_tilda, truncation)
   
   
   lossVec[1] <- fit1$lossSum
   thetaMat[1,] <- fit1$thetaEst
   
-  checkall[1,] <-  optimcheck(fit1, ulam[1], Hp, L, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+  checkall[1,] <-  optimcheck(fit1, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
-    fit1 <- fitProxGradCpp(fit1$thetaEstTilda, intStepSize = stepSize, lambda1 = ulam[i], dat, basisMat0_tilda, n.k,Hp,
+    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat, basisMat0_tilda, n.k,Hp,
                            maxInt, epsilon, shrinkScale,
-                           accelrt, numCovs, designMat1_tilda, Linv, truncation)
+                           accelrt, numCovs, designMat1_tilda, truncation)
     lossVec[i] <- fit1$lossSum
     thetaMat[i,] <- fit1$thetaEst
     
-    checkall[i,] <-  optimcheck(fit1, ulam[1], Hp, L, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+    checkall[i,] <-  optimcheck(fit1, ulam[1], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
     
     
     if(fit1$neg2loglik < start_fit$neg2loglik_sat) break

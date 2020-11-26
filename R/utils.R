@@ -154,11 +154,13 @@ optimcheckOld <- function(ssfit, lambda1, Hp, nk,eqDelta= 10^-5, uneqDelta=10^-5
 
 
 
-optimcheck <- function(ssfit, lambda1, Hp, L, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5){
+optimcheck <- function(ssfit, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5){
+  
+  # Note the output from fitProxGradCpp are theta_tilda not theta
   
   thetaSep <- ssfit$thetaEstSep[-1]
   
-  #thetaSep <- lapply(thetaSep, function(x){Linv %*% x })
+  thetaSep <- lapply(thetaSep, function(x){Linv %*% x })
   
   zeroCovs <- unlist(lapply( thetaSep, function(x){all(x==0)}))
   indOptimRes <- rep(NA, length(zeroCovs))

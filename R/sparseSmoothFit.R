@@ -47,7 +47,7 @@ smoothConstructExtract <- function(n.k, pos, constrains = FALSE){
 
 # Fit a model with sparseness-smoothness regularization for a fixed values of lambda1 and lambda2
 fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, n.k, Hp, maxInt = 1000,
-                        epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1, basisMat1, Linv){
+                        epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1, basisMat1){
   
   #gridIndex <- expand.grid(seq(length(lambda1)), seq(dim(HpAll)[3]))
   
@@ -94,19 +94,15 @@ fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, n.k, Hp, maxInt
   
   # t
   
-  thetaEstSep <- lapply(out$theta_l_proximal_sep, function(x){as.vector(Linv %*% x)
-    
-  })
-  thetaEst <- unlist(thetaEstSep)
+ # thetaEstSep <- lapply(out$theta_l_proximal_sep, function(x){as.vector(Linv %*% x) })
+ # thetaEst <- unlist(thetaEstSep)
   
-  return(list(thetaEst = thetaEst,
-              thetaEstSep = thetaEstSep , 
-              thetaEstTilda = out$theta_l_proximal,
+  return(list( thetaEst = out$theta_l_proximal,
               Est.points=Est.points, 
               geneGradL2=geneGradL2, 
               lossVals=lossVals, 
               stepSizeVec = stepSizeVec,
-              thetaEstSepTilda = out$theta_l_proximal_sep,
+              thetaEstSep = out$theta_l_proximal_sep,
               basisMat0=basisMat0[uniPosID,], 
               basisMat1=basisMat1[uniPosID,],
               designMat1=designMat1, 

@@ -60,6 +60,7 @@ iter = 4
 sourceCpp("utils.cpp")
 sourceCpp("updates.cpp")
 
+theta <- rep(0, n.k*(numCovs+1))
 theta <- rnorm(length(theta))
 truncation= TRUE
 
@@ -86,14 +87,14 @@ Hp <- (1-lambda2)* sparOmega + lambda2*smoOmega1
 
 L  = chol(Hp)
 Hinv = chol2inv(L)
-Linv = chol2inv(chol(L))
+Linv = solve(L)
 
 basisMat0_tilda <- basisMat0 %*% Linv # this tilde does depend on L-- H -- lambda2, should be calculated for each lambda2
 designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
 
 
 see1 = fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10,
-                     epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1, Linv)
+                     epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1)
 
 
 
@@ -102,7 +103,7 @@ see1 = fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxIn
 
 
 see2= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10,
-                 epsilon = 1E-6, shrinkScale,accelrt, numCovs, designMat1_tilda, Linv,  truncation)
+                 epsilon = 1E-6, shrinkScale,accelrt, numCovs, designMat1_tilda,  truncation)
 
 all.equal(see2$thetaEst, see1$thetaEst)
 
@@ -136,10 +137,10 @@ library(microbenchmark)
 
 see = microbenchmark(R = {
   fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10,
-              epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1, Linv)
+              epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1)
 },
 cpp= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10,
-                   epsilon = 1E-6, shrinkScale,accelrt, numCovs, designMat1_tilda, Linv,  truncation)
+                   epsilon = 1E-6, shrinkScale,accelrt, numCovs, designMat1_tilda,  truncation)
 
 , times = 10 )
 library(ggplot2)

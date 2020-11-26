@@ -5,6 +5,20 @@
 
 using namespace Rcpp;
 
+// em4
+List em4(const arma::mat y, const arma::mat X, const int maxit, const int nthr);
+RcppExport SEXP _snpSOMNiBUS_em4(SEXP ySEXP, SEXP XSEXP, SEXP maxitSEXP, SEXP nthrSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const int >::type maxit(maxitSEXP);
+    Rcpp::traits::input_parameter< const int >::type nthr(nthrSEXP);
+    rcpp_result_gen = Rcpp::wrap(em4(y, X, maxit, nthr));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rcpp_hello_world
 List rcpp_hello_world();
 RcppExport SEXP _snpSOMNiBUS_rcpp_hello_world() {
@@ -15,9 +29,216 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sparseOmegaCr
+arma::mat sparseOmegaCr(const arma::vec myh, const int K, const arma::mat F);
+RcppExport SEXP _snpSOMNiBUS_sparseOmegaCr(SEXP myhSEXP, SEXP KSEXP, SEXP FSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec >::type myh(myhSEXP);
+    Rcpp::traits::input_parameter< const int >::type K(KSEXP);
+    Rcpp::traits::input_parameter< const arma::mat >::type F(FSEXP);
+    rcpp_result_gen = Rcpp::wrap(sparseOmegaCr(myh, K, F));
+    return rcpp_result_gen;
+END_RCPP
+}
+// proximalOperatorCpp
+NumericVector proximalOperatorCpp(const double& t, const double& lambda1, const arma::mat& Hp, const arma::colvec& u_p, const int& nk);
+RcppExport SEXP _snpSOMNiBUS_proximalOperatorCpp(SEXP tSEXP, SEXP lambda1SEXP, SEXP HpSEXP, SEXP u_pSEXP, SEXP nkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const double& >::type lambda1(lambda1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Hp(HpSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type u_p(u_pSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    rcpp_result_gen = Rcpp::wrap(proximalOperatorCpp(t, lambda1, Hp, u_p, nk));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dot_std
+double dot_std(NumericVector& x, NumericVector& y);
+RcppExport SEXP _snpSOMNiBUS_dot_std(SEXP xSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericVector& >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(dot_std(x, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dot_arma
+double dot_arma(arma::vec& x, arma::vec& y);
+RcppExport SEXP _snpSOMNiBUS_dot_arma(SEXP xSEXP, SEXP ySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec& >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(dot_arma(x, y));
+    return rcpp_result_gen;
+END_RCPP
+}
+// proximalOperatorCppOld
+NumericVector proximalOperatorCppOld(const double& t, const double& lambda1, const arma::mat& Hp, const arma::colvec& u_p, const int& nk);
+RcppExport SEXP _snpSOMNiBUS_proximalOperatorCppOld(SEXP tSEXP, SEXP lambda1SEXP, SEXP HpSEXP, SEXP u_pSEXP, SEXP nkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const double& >::type lambda1(lambda1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Hp(HpSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type u_p(u_pSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    rcpp_result_gen = Rcpp::wrap(proximalOperatorCppOld(t, lambda1, Hp, u_p, nk));
+    return rcpp_result_gen;
+END_RCPP
+}
+// thetaUpdateCpp
+List thetaUpdateCpp(const double& stepSize, const NumericVector& theta, const NumericVector& gBinomLoss, const int& nk, const int& numCovs, const double& lambda1, const arma::mat& Hp, const arma::mat& basisMat0, const DataFrame& dat, const List& designMat1, const NumericVector& theta_m, const int& iter, const bool& accelrt, const bool& truncation);
+RcppExport SEXP _snpSOMNiBUS_thetaUpdateCpp(SEXP stepSizeSEXP, SEXP thetaSEXP, SEXP gBinomLossSEXP, SEXP nkSEXP, SEXP numCovsSEXP, SEXP lambda1SEXP, SEXP HpSEXP, SEXP basisMat0SEXP, SEXP datSEXP, SEXP designMat1SEXP, SEXP theta_mSEXP, SEXP iterSEXP, SEXP accelrtSEXP, SEXP truncationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double& >::type stepSize(stepSizeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type gBinomLoss(gBinomLossSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    Rcpp::traits::input_parameter< const double& >::type lambda1(lambda1SEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Hp(HpSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const DataFrame& >::type dat(datSEXP);
+    Rcpp::traits::input_parameter< const List& >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta_m(theta_mSEXP);
+    Rcpp::traits::input_parameter< const int& >::type iter(iterSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type accelrt(accelrtSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type truncation(truncationSEXP);
+    rcpp_result_gen = Rcpp::wrap(thetaUpdateCpp(stepSize, theta, gBinomLoss, nk, numCovs, lambda1, Hp, basisMat0, dat, designMat1, theta_m, iter, accelrt, truncation));
+    return rcpp_result_gen;
+END_RCPP
+}
+// oneUpdateCpp
+List oneUpdateCpp(const NumericVector& theta, double& stepSize, const double& lambda1, const DataFrame& dat, const arma::mat& basisMat0, const int& nk, const arma::mat& Hp, const int& numCovs, const double& shrinkScale, const List& designMat1, const NumericVector& theta_m, const int& iter, const bool& accelrt, const bool& truncation);
+RcppExport SEXP _snpSOMNiBUS_oneUpdateCpp(SEXP thetaSEXP, SEXP stepSizeSEXP, SEXP lambda1SEXP, SEXP datSEXP, SEXP basisMat0SEXP, SEXP nkSEXP, SEXP HpSEXP, SEXP numCovsSEXP, SEXP shrinkScaleSEXP, SEXP designMat1SEXP, SEXP theta_mSEXP, SEXP iterSEXP, SEXP accelrtSEXP, SEXP truncationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< double& >::type stepSize(stepSizeSEXP);
+    Rcpp::traits::input_parameter< const double& >::type lambda1(lambda1SEXP);
+    Rcpp::traits::input_parameter< const DataFrame& >::type dat(datSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Hp(HpSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    Rcpp::traits::input_parameter< const double& >::type shrinkScale(shrinkScaleSEXP);
+    Rcpp::traits::input_parameter< const List& >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta_m(theta_mSEXP);
+    Rcpp::traits::input_parameter< const int& >::type iter(iterSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type accelrt(accelrtSEXP);
+    Rcpp::traits::input_parameter< const bool& >::type truncation(truncationSEXP);
+    rcpp_result_gen = Rcpp::wrap(oneUpdateCpp(theta, stepSize, lambda1, dat, basisMat0, nk, Hp, numCovs, shrinkScale, designMat1, theta_m, iter, accelrt, truncation));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getSeparateThetaCpp
+List getSeparateThetaCpp(const NumericVector& theta, const int& nk, const int& numCovs);
+RcppExport SEXP _snpSOMNiBUS_getSeparateThetaCpp(SEXP thetaSEXP, SEXP nkSEXP, SEXP numCovsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    rcpp_result_gen = Rcpp::wrap(getSeparateThetaCpp(theta, nk, numCovs));
+    return rcpp_result_gen;
+END_RCPP
+}
+// estimatePijCpp
+List estimatePijCpp(const NumericVector& theta, const arma::mat& basisMat0, const List& designMat1, const int& nk, const int& numCovs);
+RcppExport SEXP _snpSOMNiBUS_estimatePijCpp(SEXP thetaSEXP, SEXP basisMat0SEXP, SEXP designMat1SEXP, SEXP nkSEXP, SEXP numCovsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const List& >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimatePijCpp(theta, basisMat0, designMat1, nk, numCovs));
+    return rcpp_result_gen;
+END_RCPP
+}
+// binomObjectCppValueCopy
+List binomObjectCppValueCopy(const NumericVector theta, arma::mat basisMat0, const DataFrame dat, const int nk, const int numCovs, List designMat1, const bool truncation);
+RcppExport SEXP _snpSOMNiBUS_binomObjectCppValueCopy(SEXP thetaSEXP, SEXP basisMat0SEXP, SEXP datSEXP, SEXP nkSEXP, SEXP numCovsSEXP, SEXP designMat1SEXP, SEXP truncationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const DataFrame >::type dat(datSEXP);
+    Rcpp::traits::input_parameter< const int >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int >::type numCovs(numCovsSEXP);
+    Rcpp::traits::input_parameter< List >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const bool >::type truncation(truncationSEXP);
+    rcpp_result_gen = Rcpp::wrap(binomObjectCppValueCopy(theta, basisMat0, dat, nk, numCovs, designMat1, truncation));
+    return rcpp_result_gen;
+END_RCPP
+}
+// binomObjectCpp
+List binomObjectCpp(const NumericVector& theta, const arma::mat& basisMat0, const DataFrame& dat, const int& nk, const int& numCovs, const List& designMat1, const bool& truncation);
+RcppExport SEXP _snpSOMNiBUS_binomObjectCpp(SEXP thetaSEXP, SEXP basisMat0SEXP, SEXP datSEXP, SEXP nkSEXP, SEXP numCovsSEXP, SEXP designMat1SEXP, SEXP truncationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const DataFrame& >::type dat(datSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    Rcpp::traits::input_parameter< const List& >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type truncation(truncationSEXP);
+    rcpp_result_gen = Rcpp::wrap(binomObjectCpp(theta, basisMat0, dat, nk, numCovs, designMat1, truncation));
+    return rcpp_result_gen;
+END_RCPP
+}
+// binomObjectCppRef
+List binomObjectCppRef(const NumericVector& theta, const arma::mat& basisMat0, const DataFrame& dat, const int& nk, const int& numCovs, const List& designMat1, const bool& truncation);
+RcppExport SEXP _snpSOMNiBUS_binomObjectCppRef(SEXP thetaSEXP, SEXP basisMat0SEXP, SEXP datSEXP, SEXP nkSEXP, SEXP numCovsSEXP, SEXP designMat1SEXP, SEXP truncationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type basisMat0(basisMat0SEXP);
+    Rcpp::traits::input_parameter< const DataFrame& >::type dat(datSEXP);
+    Rcpp::traits::input_parameter< const int& >::type nk(nkSEXP);
+    Rcpp::traits::input_parameter< const int& >::type numCovs(numCovsSEXP);
+    Rcpp::traits::input_parameter< const List& >::type designMat1(designMat1SEXP);
+    Rcpp::traits::input_parameter< const bool& >::type truncation(truncationSEXP);
+    rcpp_result_gen = Rcpp::wrap(binomObjectCppRef(theta, basisMat0, dat, nk, numCovs, designMat1, truncation));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_snpSOMNiBUS_em4", (DL_FUNC) &_snpSOMNiBUS_em4, 4},
     {"_snpSOMNiBUS_rcpp_hello_world", (DL_FUNC) &_snpSOMNiBUS_rcpp_hello_world, 0},
+    {"_snpSOMNiBUS_sparseOmegaCr", (DL_FUNC) &_snpSOMNiBUS_sparseOmegaCr, 3},
+    {"_snpSOMNiBUS_proximalOperatorCpp", (DL_FUNC) &_snpSOMNiBUS_proximalOperatorCpp, 5},
+    {"_snpSOMNiBUS_dot_std", (DL_FUNC) &_snpSOMNiBUS_dot_std, 2},
+    {"_snpSOMNiBUS_dot_arma", (DL_FUNC) &_snpSOMNiBUS_dot_arma, 2},
+    {"_snpSOMNiBUS_proximalOperatorCppOld", (DL_FUNC) &_snpSOMNiBUS_proximalOperatorCppOld, 5},
+    {"_snpSOMNiBUS_thetaUpdateCpp", (DL_FUNC) &_snpSOMNiBUS_thetaUpdateCpp, 14},
+    {"_snpSOMNiBUS_oneUpdateCpp", (DL_FUNC) &_snpSOMNiBUS_oneUpdateCpp, 14},
+    {"_snpSOMNiBUS_getSeparateThetaCpp", (DL_FUNC) &_snpSOMNiBUS_getSeparateThetaCpp, 3},
+    {"_snpSOMNiBUS_estimatePijCpp", (DL_FUNC) &_snpSOMNiBUS_estimatePijCpp, 5},
+    {"_snpSOMNiBUS_binomObjectCppValueCopy", (DL_FUNC) &_snpSOMNiBUS_binomObjectCppValueCopy, 7},
+    {"_snpSOMNiBUS_binomObjectCpp", (DL_FUNC) &_snpSOMNiBUS_binomObjectCpp, 7},
+    {"_snpSOMNiBUS_binomObjectCppRef", (DL_FUNC) &_snpSOMNiBUS_binomObjectCppRef, 7},
     {NULL, NULL, 0}
 };
 

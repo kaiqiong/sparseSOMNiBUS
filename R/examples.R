@@ -23,7 +23,7 @@ printDetail = TRUE
 accelrt = FALSE
 
 fit_out <- sparseSmoothFit(dat, n.k=n.k, stepSize=stepSize,lambda1=lambda1, lambda2=lambda2, maxInt = maxInt,
-                            maxInt_lineSearch = 10, epsilon = 1E-6, printDetail = TRUE, initTheta=initTheta, shrinkScale = shrinkScale,
+                      epsilon = 1E-6, printDetail = TRUE, initTheta=initTheta, shrinkScale = shrinkScale,
                            accelrt = accelrt)
 
 saveRDS(fit_out, "/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/

@@ -28,7 +28,7 @@ List fitProxGradCppSeq(const NumericVector& ulam,
                     const int& numCovs, 
                     const List& designMat1, 
                     const bool& truncation,
-                    const double& neg2loglikSat,
+                    const double& neg2loglikSat
                     ){
   
   int nlam = ulam.length();
@@ -41,7 +41,7 @@ List fitProxGradCppSeq(const NumericVector& ulam,
   
   List fit1 = fitProxGradCpp(theta, intStepSize,lamnow, dat, basisMat0, nk,Hp,
                          maxInt, epsilon, shrinkScale,
-                         accelrt, numCovs, designMat1, Linv, truncation);
+                         accelrt, numCovs, designMat1,  truncation);
   arma::rowvec temp1 = fit1["thetaEst"];
   thetaMat.row(0) = temp1;
   
@@ -60,7 +60,7 @@ List fitProxGradCppSeq(const NumericVector& ulam,
     NumericVector newInt = fit1["thetaEst"];
     fit1 = fitProxGradCpp(newInt, intStepSize,ulam[i], dat, basisMat0, nk,Hp,
                            maxInt, epsilon, shrinkScale,
-                           accelrt, numCovs, designMat1, Linv, truncation);
+                           accelrt, numCovs, designMat1,  truncation);
     arma::rowvec temp1 = fit1["thetaEst"];
     thetaMat.row(i) = temp1;
     

@@ -1,5 +1,5 @@
 
-lambdaMax <- function(y, x, designMat1, Hp, numCovs, mu){
+lambdaMax <- function(y, x, designMat1, Hp, Hp_inv, numCovs, mu){
   
   
   diffvec = (y- x*mu)
@@ -7,7 +7,7 @@ lambdaMax <- function(y, x, designMat1, Hp, numCovs, mu){
 # sqrt(t(b0)%*% Hp %*% b0)
   
   res = NULL
-  Hp_inv = solve(Hp)
+
   for(p in 1:numCovs){
   
   bp =  2* t(designMat1[[p]]) %*% diffvec 

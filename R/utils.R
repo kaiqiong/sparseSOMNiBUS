@@ -153,12 +153,14 @@ optimcheckOld <- function(ssfit, lambda1, Hp, nk,eqDelta= 10^-5, uneqDelta=10^-5
 #optimcheck(see2,lambda1=lambda1, Hp, nk = n.k)
 
 
+#@thetaTildaSep  estimate of theta_tilda from fitProxGradCpp()  fit1$thetaEstSep
+#@ gNeg2loglik  the gradient of negative twice log-likelihood, (w.r.t theta_tilda) fit1$gNeg2loglik
 
-optimcheck <- function(ssfit, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5){
+optimcheck <- function(thetaTildaSep, gNeg2loglik, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5){
   
   # Note the output from fitProxGradCpp are theta_tilda not theta
   
-  thetaSep <- ssfit$thetaEstSep[-1]
+  thetaSep <- thetaTildaSep[-1]
   
   thetaSep <- lapply(thetaSep, function(x){Linv %*% x })
   
@@ -171,7 +173,7 @@ optimcheck <- function(ssfit, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, un
   
   for(p in  nonzeroCovid ){
     
-    bp = -ssfit$gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
+    bp = -gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
     
     # ap =  2* t(designMat1[[p]]) %*% (dat$Meth_Counts-dat$Total_Counts*ssfit$pi_ij) 
     
@@ -184,7 +186,7 @@ optimcheck <- function(ssfit, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, un
   }
   
   for(p in zeroCovid){
-    bp = -ssfit$gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
+    bp = -gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
     
     #ap =  2* t(designMat1[[p]]) %*% (dat$Meth_Counts-dat$Total_Counts*ssfit$pi_ij) 
  

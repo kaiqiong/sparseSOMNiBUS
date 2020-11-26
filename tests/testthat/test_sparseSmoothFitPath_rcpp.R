@@ -45,7 +45,7 @@ designMat1 <- initOut$designMat1
 
 
 stepSize=2
-#theta_m <- theta <- initTheta <- rep(0, n.k*(ncol(dat)-3))
+theta_m <- theta <- initTheta <- rep(0, n.k*(ncol(dat)-3))
 shrinkScale=0.5
 
 maxInt = 200
@@ -79,12 +79,13 @@ lambda2 = 0.5
 
 # Call 
 
+time0 = Sys.time()
 see1 = sparseSmoothPath(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                                     designMat1, basisMat1,  lambda = c(180, 198, 200), nlam = 100, numCovs,
                                     maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, 
                         truncation = TRUE, eqDelta=0.01, uneqDelta=10^(-4))
 
-
+print(Sys.time()-time0)
 
 #
 

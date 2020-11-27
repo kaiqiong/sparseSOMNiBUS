@@ -129,7 +129,7 @@ extractMats <- function(dat, n.k){
   #basisMat0[,-1] <- scale(basisMat0[,-1])
   basisMat1 <- out1$basisMat
   smoOmega1 <- out1$smoothOmegaCr * nrow(dat)^2
-  sparOmega <- sparseOmegaCr(out1$myh, n.k, out1$matF) # the same for both intercept and non_intercept # Call a RCpp function
+  sparOmega <- sparseOmegaCr( out1$myh, n.k, out1$matF) # the same for both intercept and non_intercept # Call a RCpp function
   
   numCovs <- ncol(dat) - 4
   designMat1 <- extractDesignMat1(numCovs, basisMat1, dat)

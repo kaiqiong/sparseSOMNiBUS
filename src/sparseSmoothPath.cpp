@@ -12,7 +12,6 @@ using namespace arma;
 
 // [[Rcpp::export]]
 
-// run the proximal gradient descent iteration for a sequence of lambda1 given lambda 2
 
 List fitProxGradCppSeq(const NumericVector& ulam,
                     NumericVector& theta, 
@@ -30,7 +29,7 @@ List fitProxGradCppSeq(const NumericVector& ulam,
                     const bool& truncation,
                     const double& neg2loglikSat
                     ){
-  
+  // run the proximal gradient descent iteration for a sequence of lambda1 given lambda 2
   int nlam = ulam.length();
   int myp = (numCovs+1)*nk;
   

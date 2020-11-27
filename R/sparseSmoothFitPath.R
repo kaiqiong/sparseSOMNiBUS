@@ -61,9 +61,6 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
 
   
   Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
-  
- 
-  
   #--- Matrix decomposition for Hp and calculate transformed design matrix
   
   L  = chol(Hp)
@@ -100,9 +97,14 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   #lossVec <- rep(NA,nlam)
   thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
   checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat, basisMat0_tilda, n.k,Hp,
-                         maxInt, epsilon, shrinkScale,
-                         accelrt, numCovs, designMat1_tilda, truncation)
+  
+  lamnow = ulam[1]+100000
+  fit1 <-  .Call(`_sparseSOMNiBUS_fitProxGradCpp`,theta, stepSize, lamnow, dat, basisMat0_tilda, n.k, Hp, maxInt, epsilon, shrinkScale, accelrt,
+                 numCovs, designMat1_tilda, truncation)
+  
+  #fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat, basisMat0_tilda, n.k,Hp,
+  #                       maxInt, epsilon, shrinkScale,
+  #                       accelrt, numCovs, designMat1_tilda, truncation)
   
   
   #lossVec[1] <- fit1$lossSum
@@ -110,9 +112,13 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
-    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat, basisMat0_tilda, n.k,Hp,
-                           maxInt, epsilon, shrinkScale,
-                           accelrt, numCovs, designMat1_tilda, truncation)
+    
+    
+    fit1 <-  .Call(`_sparseSOMNiBUS_fitProxGradCpp`,fit1$thetaEst, stepSize, ulam[i], dat, basisMat0_tilda, n.k, Hp, maxInt, epsilon, shrinkScale, accelrt,
+                   numCovs, designMat1_tilda, truncation)
+    #fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat, basisMat0_tilda, n.k,Hp,
+    #                       maxInt, epsilon, shrinkScale,
+     #                     accelrt, numCovs, designMat1_tilda, truncation)
     #lossVec[i] <- fit1$lossSum
     thetaMat[,i] <- fit1$thetaEst
     
@@ -128,7 +134,88 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
 }
 
-
+sparseSmoothPathOld <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
+                             designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
+                             maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE,
+                             eqDelta, uneqDelta){
+  
+  
+  Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
+  
+  
+  
+  #--- Matrix decomposition for Hp and calculate transformed design matrix
+  
+  L  = chol(Hp)
+  Hinv = chol2inv(L)
+  Linv = solve(L)
+  
+  
+  
+  basisMat0_tilda <- basisMat0 %*% Linv # this tilde does depend on L-- H -- lambda2, should be calculated for each lambda2
+  designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
+  
+  #-------------------
+  start_fit <-  getStart(y=dat$Meth_Counts, x=dat$Total_Counts, designMat1 , Hp, Hinv, numCovs, basisMat0)
+  myp = (numCovs+1)*n.k
+  lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
+  if (is.null(lambda)) {
+    if (lambda.min.ratio >= 1) stop("lambda.min.ratio should be less than 1")
+    
+    # compute lambda max: to add code here
+    lambda_max <- start_fit$lambda_max
+    
+    # compute lambda sequence
+    ulam <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+                    length.out = nlam))
+  } else { # user provided lambda values
+    user_lambda = TRUE
+    if (any(lambda < 0)) stop("lambdas should be non-negative")
+    ulam = as.double(rev(sort(lambda)))
+    nlam = as.integer(length(lambda))
+  }
+  
+  # Fit a sequence of 
+  
+  lossVec <- rep(NA,nlam)
+  thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
+  checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
+  
+ # lamnow = ulam[1]+100000
+  #fit1 <-  .Call(`_sparseSOMNiBUS_fitProxGradCpp`,theta, stepSize, lamnow, dat, basisMat0_tilda, n.k, Hp, maxInt, epsilon, shrinkScale, accelrt,
+ #                numCovs, designMat1_tilda, truncation)
+  
+  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat, basisMat0_tilda, n.k,Hp,
+                         maxInt, epsilon, shrinkScale,
+                         accelrt, numCovs, designMat1_tilda, truncation)
+  
+  
+  #lossVec[1] <- fit1$lossSum
+  thetaMat[,1] <- fit1$thetaEst
+  
+  checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+  for( i in 2:length(ulam)){
+    
+    
+    #fit1 <-  .Call(`_sparseSOMNiBUS_fitProxGradCpp`,fit1$thetaEst, stepSize, ulam[i], dat, basisMat0_tilda, n.k, Hp, maxInt, epsilon, shrinkScale, accelrt,
+    #               numCovs, designMat1_tilda, truncation)
+    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat, basisMat0_tilda, n.k,Hp,
+                           maxInt, epsilon, shrinkScale,
+                         accelrt, numCovs, designMat1_tilda, truncation)
+    lossVec[i] <- fit1$lossSum
+    thetaMat[,i] <- fit1$thetaEst
+    
+    checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+    
+    
+    if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
+    
+  }
+  
+  return(out = list(thetaMat=thetaMat, ulam= ulam, checkall = checkall))
+  
+  
+}
 
 sparseSmoothPathCpp <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                                 designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,

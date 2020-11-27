@@ -12,7 +12,6 @@ using namespace arma;
 
 // [[Rcpp::export]]
 
-// run the proximal gradient descent iteration for a given pairs of lambda1 and lambda2.
 List fitProxGradCpp(NumericVector& theta, 
                     double& intStepSize,
                     const double& lambda1,
@@ -27,6 +26,7 @@ List fitProxGradCpp(NumericVector& theta,
                     const int& numCovs, 
                     const List& designMat1, 
                     const bool& truncation){
+  // run the proximal gradient descent iteration for a given pairs of lambda1 and lambda2.
   
   // arma::mat Hp=sparOmega + lambda2*smoOmega1; 
   

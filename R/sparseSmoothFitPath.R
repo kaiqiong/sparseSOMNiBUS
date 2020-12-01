@@ -205,7 +205,7 @@ sparseSmoothPathOld <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.
     lossVec[i] <- fit1$lossSum
     thetaMat[,i] <- fit1$thetaEst
     
-    checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+    #checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
     
     
     if(fit1$neg2loglik < start_fit$neg2loglik_sat) break

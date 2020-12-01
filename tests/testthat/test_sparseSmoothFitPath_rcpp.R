@@ -25,6 +25,7 @@ library(Rcpp)
 sourceCpp("sparseOmegaCr.cpp")
 
 sourceCpp("utils.cpp")
+
 sourceCpp("updates.cpp")
 
 sourceCpp("proxGradFit.cpp")
@@ -259,13 +260,25 @@ time0 = Sys.time()
 res_now = fitProxGradCppSeq(ulam, theta, stepSize, dat, basisMat0_tilda, n.k, Hp,
                         maxInt, epsilon, shrinkScale, accelrt, numCovs, designMat1_tilda, 
                         truncation,neg2loglikSat=start_fit$neg2loglik_sat)
-
+print(Sys.time()-time0)
+#Time difference of 5.576715 mins
 
 dim(res_now$thetaMat)
 
+checkAlllam <- matrix(NA, nrow = nlam, ncol = numCovs)
+
+lamv <- ulam
+lamv[1]<- ulam[1]+100000
+for ( i in seq(length(ulam))){
+  thetaSep =  getSeparateThetaCpp(res_now$thetaMat[i,], n.k, numCovs)
+  
+  checkAlllam[i,] <- optimcheck(thetaSep, res_now$gNeg2loglikTilda[i,], lamv[i], Hp, L, Linv, Hinv, n.k, eqDelta = 0.1, uneqDelta = 10^-5 )
+}
 
 
-print(Sys.time()-time0)
+checkAlllam
+
+
 
 
 

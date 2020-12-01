@@ -33,20 +33,20 @@ List fitProxGradCppSeq(const NumericVector& ulam,
   int nlam = ulam.length();
   int myp = (numCovs+1)*nk;
   
-  arma::mat thetaMat(nlam, myp);
-  arma::mat gNeg2loglikTilda(nlam, myp);
+  arma::mat thetaMat(myp, nlam);
+  arma::mat gNeg2loglikTilda(myp, nlam);
 
   double lamnow = ulam[0]+100000;
   
   List fit1 = fitProxGradCpp(theta, intStepSize,lamnow, dat, basisMat0, nk,Hp,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1,  truncation);
-  arma::rowvec temp1 = fit1["thetaEst"];
-  thetaMat.row(0) = temp1;
+  arma::vec temp1 = fit1["thetaEst"];
+  thetaMat.col(0) = temp1;
   
   
-  arma::rowvec temp2 = fit1["gNeg2loglik"];
-  gNeg2loglikTilda.row(0) = temp2;
+  arma::vec temp2 = fit1["gNeg2loglik"];
+  gNeg2loglikTilda.col(0) = temp2;
   // check the fit --- can be removed later -- check on R instead
   
  // NumericVector temp2 = optimcheck(Named("ssfit", fit1), 
@@ -60,11 +60,11 @@ List fitProxGradCppSeq(const NumericVector& ulam,
     fit1 = fitProxGradCpp(newInt, intStepSize,ulam[i], dat, basisMat0, nk,Hp,
                            maxInt, epsilon, shrinkScale,
                            accelrt, numCovs, designMat1,  truncation);
-    arma::rowvec temp1 = fit1["thetaEst"];
-    thetaMat.row(i) = temp1;
+    arma::vec temp1 = fit1["thetaEst"];
+    thetaMat.col(i) = temp1;
     
-    arma::rowvec temp2 = fit1["gNeg2loglik"];
-    gNeg2loglikTilda.row(i) = temp2;
+    arma::vec temp2 = fit1["gNeg2loglik"];
+    gNeg2loglikTilda.col(i) = temp2;
     
     double val1 = fit1["neg2loglik"];
     

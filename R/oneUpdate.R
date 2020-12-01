@@ -113,10 +113,12 @@ thetaUpdate <- function(stepSize, theta, gBinomLoss, n.k, numCovs, lambda1, Hp, 
 
   #theta_l_proximal <- as.vector(theta_l_p_sepAll[,,jj])
   
-  G_t_theta <- (theta - theta_l_proximal)/stepSize
-  
+  if(accelrt){
+    G_t_theta <- (thetaInterm - theta_l_proximal)/stepSize
+  }else{
+   G_t_theta <- (theta - theta_l_proximal)/stepSize
+  }
   binom_out_new <- binomObject(theta_l_proximal,basisMat0, dat, n.k, numCovs, designMat1, truncation)
-  
   if(accelrt){
     return(list(binom_out_new=binom_out_new,G_t_theta = G_t_theta, 
                 theta_l_proximal=theta_l_proximal, thetaInterm=thetaInterm, binom_outInterm=binom_outInterm))

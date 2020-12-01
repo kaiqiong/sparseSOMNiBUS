@@ -96,7 +96,22 @@ designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
 see1 = fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10,
                      epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1)
 
+#---------- Compare  accelrt and not accelrt -------#
 
+lambda1 = 160
+time0 = Sys.time()
+fit_noaccelr = fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
+                   epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1)
+
+plot(apply(fit_noaccelr$lossVals, 1, sum), ylim = c(65140, 65190))
+print(Sys.time() -time0)
+
+time0 = Sys.time()
+fit_accelr = fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
+                         epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt=TRUE, numCovs, designMat1_tilda, basisMat1)
+print(Sys.time() -time0)
+points(apply(fit_accelr$lossVals, 1, sum), col = 2)
+#---------------------------------------------------#
 
 
 

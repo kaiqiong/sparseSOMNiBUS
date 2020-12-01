@@ -71,8 +71,14 @@ fitProxGrad <- function(theta, stepSize,lambda1, dat, basisMat0, n.k, Hp, maxInt
     iter <- iter + 1
     theta_m <- theta
     theta <- out$theta_l_proximal  
+    
+    if(accelrt){
+    out <- oneUpdate(theta, stepSize=out$stepSize, lambda1, dat, basisMat0, n.k, Hp,  numCovs, shrinkScale, 
+                       designMat1,theta_m=theta_m, iter=iter, accelrt)
+    }else{
     out <- oneUpdate(theta, stepSize, lambda1, dat, basisMat0, n.k, Hp,  numCovs, shrinkScale, 
                      designMat1,theta_m=theta_m, iter=iter, accelrt)
+    }
     
     penTerms <- twoPenalties(out$theta_l_proximal_sep,  lambda1, numCovs, n.k)
     Est.points <- rbind(Est.points, out$theta_l_proximal)
@@ -128,7 +134,7 @@ extractMats <- function(dat, n.k){
   basisMat0 <- out0$basisMat
   #basisMat0[,-1] <- scale(basisMat0[,-1])
   basisMat1 <- out1$basisMat
-  smoOmega1 <- out1$smoothOmegaCr * nrow(dat)^2
+  smoOmega1 <- out1$smoothOmegaCr #* nrow(dat)^2
   sparOmega <- sparseOmegaCr( out1$myh, n.k, out1$matF) # the same for both intercept and non_intercept # Call a RCpp function
   
   numCovs <- ncol(dat) - 4

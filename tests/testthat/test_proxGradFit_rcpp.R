@@ -124,7 +124,7 @@ all.equal(see2$thetaEst, see1$thetaEst)
 
 all.equal(see2$lossSum, as.numeric(see1$lossSum[length(see1$lossSum)]))
 
-all.equal(see1$pi_ij, see2$pi_ij)
+#all.equal(see1$pi_ij, see2$pi_ij)
 
 
 all.equal(see1$thetaEstSep, see2$thetaEstSep)
@@ -142,6 +142,31 @@ all.equal(see1$lossVals[nrow(see1$lossVals),1], see2$neg2loglik)
 #  print( all.equal(see1$Est.points[i+1,], see2$thetaMat[i,]))
 #}
 
+
+#-------------------------------------#
+# Add stopping rule objective functions are close
+#-------------------------------------#
+
+lambda1 = 200
+fitsee= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
+                     epsilon = 1E-6, shrinkScale,accelrt, numCovs, designMat1_tilda,  truncation)
+
+
+fitsee$Iter
+
+
+#--- requires significantly less iterations:  (117 --- 606)
+
+
+
+fitsee2= fitProxGrad(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
+                     epsilon = 1E-6, printDetail = FALSE, shrinkScale,accelrt, numCovs, designMat1_tilda, basisMat1)
+
+nrow(fitsee2$Est.points)
+ss = tail(fitsee2$lossVals[,1]+fitsee2$lossVals[,2])
+
+(ss[-length(ss)]-ss[-1])/nrow(dat)
+#-----------------------------------
 
 test_that("Rcpp returns the save proximal gradient output as R function ", {
   expect_equal(all.equal(see1$thetaEst, see2$thetaEst))

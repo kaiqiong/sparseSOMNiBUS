@@ -33,6 +33,8 @@ List fitProxGradCpp(NumericVector& theta,
  // arma::mat Hp=(1-lambda2)*sparOmega + lambda2*smoOmega1; 
   int iter=0;
   //-- for --test//
+  
+  int nsamp = dat.nrows();
 
  // arma::mat thetaMat(maxInt+10, theta.length());
   
@@ -49,15 +51,26 @@ List fitProxGradCpp(NumericVector& theta,
   double innerdot = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
   double tol = pow(innerdot, 0.5);
   
+  // Calculate the loss value evaluated at the theta_new
+  List binom_out_new = out["binom_out_new"];
+  double neg2loglik = binom_out_new["neg2loglik"];
+  List theta_l_proximal_sep=out["theta_l_proximal_sep"];
+  double penTerms = twoPenaltiesCpp(theta_l_proximal_sep, lambda1, numCovs, nk);
+  double lossSum = neg2loglik + penTerms;
+  double lossSumOld = lossSum;
+  // 
+  
+  double tol2 = 100;
+  
  // arma::rowvec temp = theta_new;
  // thetaMat.row(iter) = temp;
-  
-  while((tol > epsilon) & (iter < maxInt-1)){
 
+  
+  while(((tol > epsilon) & (iter < maxInt-1)) & (tol2 >epsilon)){
+  
+   lossSumOld = lossSum;
    theta = theta_new;
  
-   
-   
    out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk, Hp,  numCovs, shrinkScale, 
                      designMat1,theta, iter, accelrt, truncation);
    theta_new=out["theta_l_proximal"];
@@ -68,6 +81,18 @@ List fitProxGradCpp(NumericVector& theta,
     diff=theta_new-theta;
     innerdot = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
     tol = pow(innerdot, 0.5);
+    
+  // Add another tolerance checking for the values of objective functions  
+     theta_l_proximal_sep=out["theta_l_proximal_sep"];
+     binom_out_new = out["binom_out_new"];
+     neg2loglik = binom_out_new["neg2loglik"];
+    
+     penTerms = twoPenaltiesCpp(theta_l_proximal_sep, lambda1, numCovs, nk);
+     lossSum = neg2loglik + penTerms;
+    
+    tol2 = lossSumOld-lossSum;
+    tol2 = tol2/nsamp;
+  // 
     iter = iter+1;
     stepSizeVec(iter) = out["stepSize"];
    // arma::rowvec temp = theta_new;
@@ -90,16 +115,6 @@ List fitProxGradCpp(NumericVector& theta,
   //  theta = theta_new;
  // } while(tol > epsilon & iter < maxInt);
   
-  
-  
-  List theta_l_proximal_sep=out["theta_l_proximal_sep"];
-  double penTerms = twoPenaltiesCpp(theta_l_proximal_sep, lambda1, numCovs, nk);
-  List binom_out_new = out["binom_out_new"];
-  
-  NumericVector pi_ij = binom_out_new["pi_ij"];
-  
-  double neg2loglik = binom_out_new["neg2loglik"];
-  double lossSum = neg2loglik + penTerms;
   NumericVector gNeg2loglik= binom_out_new["gNeg2loglik"];
   
  
@@ -108,7 +123,7 @@ List fitProxGradCpp(NumericVector& theta,
                         Named("lossSum")=lossSum,
                         Named("neg2loglik")=neg2loglik,
                         Named("thetaEstSep") = theta_l_proximal_sep,
-                        Named("pi_ij")=pi_ij,
+                      //  Named("pi_ij")=pi_ij,
                         Named("Iter") = iter,
                         Named("gNeg2loglik")=gNeg2loglik,
                         Named("stepSizeVec") = stepSizeVec);

@@ -57,7 +57,7 @@ getStart <- function(y, x, designMat1, Hp,Hp_inv, numCovs, basisMat0){
 
 
 sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
-                             designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
+                             designMat1, lambda = NULL, nlam = 100, numCovs,
                              maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE){
   
   Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
@@ -128,10 +128,10 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
 }
 
-
-sparseSmoothGrid <- function(theta, stepSize, lam2 = NULL,  nlam2= 10, dat, basisMat0, n.k, sparOmega,smoOmega1,
-                             designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
-                             maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE,
+#'@param dat:  columns of outcomes: "Meth_Counts" and "Total_Counts"
+sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  nlam2= 10, theta, stepSize, shrinkScale,
+                             basisMat0, sparOmega,smoOmega1, designMat1, numCovs,
+                             maxInt = 10^5,  epsilon = 1E-20, accelrt=FALSE, truncation = TRUE,
                              mc.cores = 10){
   myp = (numCovs+1)*n.k
   lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
@@ -165,14 +165,16 @@ sparseSmoothGrid <- function(theta, stepSize, lam2 = NULL,  nlam2= 10, dat, basi
   
   AllOut = parallel::mclapply(seq(ulam2), function(i){
     sparseSmoothPath(theta, stepSize,lambda2=ulam2[i], dat, basisMat0, n.k, sparOmega,smoOmega1,
-                            designMat1, basisMat1,  lambda, nlam, numCovs,
+                            designMat1,   lambda, nlam, numCovs,
                             maxInt ,  epsilon , shrinkScale,accelrt, 
                             truncation)
 
   }, mc.cores=mc.cores)
   
   for ( i in seq(ulam2)){
-     thetaOut[[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMat,sparse = T)
+    
+    #thetaOut[[i]] <- AllOut[[i]]$thetaMat
+    thetaOut[[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMat,sparse = TRUE)
     # thetaOut[,,i] <- AllOut[[i]]$thetaMat
     lamGrid[,i] <- AllOut[[i]]$ulam
   }

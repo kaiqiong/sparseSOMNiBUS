@@ -11,6 +11,7 @@
 # extract design matrix for beta1(t), ... betap(t)
 
 extractDesignMat1 <- function(numCovs, basisMat1, dat ){
+  
   lapply(seq_len(numCovs), function(i){(sweep(basisMat1, 1 ,dat[, paste0("X", i)], "*"  ))})
 }
 

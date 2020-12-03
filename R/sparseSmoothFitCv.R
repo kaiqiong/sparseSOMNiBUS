@@ -1,5 +1,5 @@
 
-sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1,lambda1= seq(0, 5, 0.1), lambda2=seq(0, 5, 0.1), maxInt = 500,
+sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100, lam2 = NULL, nlam2 = 10, maxInt = 500,
                               epsilon = 1E-6, printDetail = TRUE, initTheta, shrinkScale=0.5,
                               accelrt = TRUE, nfolds = 10){
   dat <- dat[sample(1:nrow(dat), nrow(dat)),]

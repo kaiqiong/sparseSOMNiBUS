@@ -56,6 +56,7 @@ getStart <- function(y, x, designMat1, Hp,Hp_inv, numCovs, basisMat0){
 
 
 
+
 sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                              designMat1, lambda = NULL, nlam = 100, numCovs,
                              maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE){
@@ -96,6 +97,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   #lossVec <- rep(NA,nlam)
   thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
+  #zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
   lamnow = ulam[1]+100000
@@ -109,6 +111,8 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   thetaMat[,1] <- fit1$thetaEst
   gNeg2loglikTilda[,1]  <-  fit1$gNeg2loglik
   
+  #zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+  #fit1$thetaEstSep
   #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
     
@@ -119,7 +123,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
     gNeg2loglikTilda[,i]  <-  fit1$gNeg2loglik
    # checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
     
-    
+    #zeroCovsBool[,i] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
     if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
     
   }
@@ -130,7 +134,8 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   
   
-  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, thetaMatOriginal=thetaMatOriginal))
+  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
+                    thetaMatOriginal=thetaMatOriginal))
   
 }
 
@@ -148,9 +153,9 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
   if (is.null(lam2)) {
     lambda_max <- 0.999
     # compute lambda sequence
-    ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
-      #exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
-      #             length.out = nlam2-1))
+    #ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
+    ulam2 <- 1-exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+                   length.out = nlam2))
     #ulam2 <- c(ulam2, 0)
   } else { # user provided lambda values
     user_lambda2 = TRUE
@@ -165,9 +170,11 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
     nlam = as.integer(length(lambda))
   }
   
-  thetaOutOri <- thetaOut <-  vector("list", nlam2)
+   thetaOutOri <- thetaOut <-  vector("list", nlam2)
   #thetaOut <-  array(NA, c(myp, nlam , nlam2))
   lamGrid <- matrix(NA, nrow = nlam, ncol = nlam2)
+  
+  
   #dimnames(lamGrid) <- list("lambda", "alpha")
   
   AllOut = parallel::mclapply(seq(ulam2), function(i){
@@ -185,12 +192,14 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
     thetaOutOri [[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMatOriginal,sparse = TRUE)
     # thetaOut[,,i] <- AllOut[[i]]$thetaMat
     lamGrid[,i] <- AllOut[[i]]$ulam
+   # zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
   }
   
   # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   
   
-  return(out = list(thetaOut=thetaOut, lamGrid= lamGrid, ulam2 = ulam2, thetaOutOri=thetaOutOri))
+  return(out = list(thetaOut=thetaOut, lamGrid= lamGrid, ulam2 = ulam2,
+                    thetaOutOri=thetaOutOri))
  
 }
 

@@ -73,7 +73,7 @@ sparseSmoothPred <- function(trainFit, trainDatPos, testDat, basisMat0, basisMat
     vapply(seq(nlam[[i]]), function(j){
       
       testOut <-binomObjectCpp(theta=trainFit$thetaOutOri[[i]][,j], basisMat0=basisMat0,dat=testDat[,1:2],nk=n.k,
-                               numCovs=,designMat1=designMat1, truncation=truncation 
+                               numCovs=numCovs,designMat1=designMat1, truncation=truncation 
                                )
       testOut$neg2loglik/nrow(testDat)
     }, FUN.VALUE = 1)

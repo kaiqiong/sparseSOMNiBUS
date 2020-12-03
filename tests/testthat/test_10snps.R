@@ -25,12 +25,12 @@
 
 
 
-my.samp <- 100
+my.samp <- 50
 
-n.snp <- 10
+n.snp <- 5
 
 
-n.sig.snp <- round(n.snp *0.1)
+n.sig.snp <- round(n.snp *0.2)
 
 
 library(magrittr)
@@ -50,6 +50,8 @@ BSMethSim_bbinom <-function(n, posit, theta.0, beta, phi, random.eff = F, mu.e=0
   }else{
     my.e <- rep(mu.e, n)
   }
+  
+  
   
   my.theta <- t(sapply(1:n, function(i){
     theta.0 + rowSums(sapply(1:ncol(Z), function(j){Z[i,j] * beta[,j]})) + my.e[i]
@@ -130,7 +132,7 @@ for (i in 1:ncol(betas_non_zeros)){
 beta_all <- cbind(beta.0, betas_non_zeros)
 
 
-beta_all[,1] <- beta_all[,1]-30
+#beta_all[,1] <- beta_all[,1]-30
 
 #beta_all[,1] <- 0
 
@@ -145,7 +147,6 @@ add_read_depth =0 #
 
 
 
-covs_use <- c("disease", "cell_type", "NullZ") 
 #--------
 
 
@@ -200,8 +201,8 @@ my.X <-  (my.X + add_read_depth)
 # Step 3.2: Simulate the methylated count matrix
 #---------------------------
 
-sim.dat<-BSMethSim_bbinom(n= my.samp, posit = pos, theta.0 =beta_all[,1], beta= beta_all[,-1], phi=phi, 
-                          X = my.X, Z =Z[, 1:n.sig.snp],p0 = 0, p1 = 1,random.eff = F)
+sim.dat<-BSMethSim_bbinom(n= my.samp, posit = pos, theta.0 =beta_all[,1], beta= as.matrix(beta_all[,-1]), phi=phi, 
+                          X = my.X, Z =as.matrix(Z[, 1:n.sig.snp], ncol = n.sig.snp),p0 = 0, p1 = 1,random.eff = F)
 
 
 
@@ -226,7 +227,7 @@ for( i in 1:my.samp){
 length(pos)
 
 # because curretnly, I didn't add smoothness penalty for the intercept, I will use n.k = 5 for the intercept
-n.k = 20 # for the rest of Zs (non-intercept predictors)
+n.k = 10 # for the rest of Zs (non-intercept predictors)
 
 
 
@@ -261,24 +262,96 @@ n.k = 10
 numCovs = ncol(dat)-4
 shrinkScale=1/2
 
-n.k = 10
-lambda1 = 0.002
+
+saveRDS(dat, file = "datSnp5nsig1.RDS")
+
+n.k = 5
+lambda1 = 20
 
 lambda2 = 0.1
-stepSize=3
+stepSize=2
 theta <- initTheta <- rep(0, n.k*(ncol(dat)-3))
 shrinkScale=0.5
 
-maxInt = 100
-maxInt_lineSearch = 10
+maxInt = 20
 epsilon = 1E-6
 printDetail = TRUE
 
 accelrt = FALSE
+setwd("/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/src")
+library(Rcpp)
+sourceCpp("sparseOmegaCr.cpp")
+source("/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/utils.R")
+source("/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFit.R")
+source("/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/oneUpdate.R")
 
 fit_out <- sparseSmoothFit(dat, n.k=n.k, stepSize=stepSize,lambda1=lambda1, lambda2=lambda2, maxInt = maxInt,
-                           maxInt_lineSearch = 10, epsilon = 1E-6, printDetail = TRUE, initTheta=initTheta, shrinkScale = shrinkScale,
+                            epsilon = 1E-6, printDetail = FALSE, initTheta=initTheta, shrinkScale = shrinkScale,
                            accelrt = accelrt)
 
+plot(fit_out$lossVals[,1]+fit_out$lossVals[,2], type = "l", 
+     main= paste0("step size = ", stepSize, " MaxInt = ", maxInt),
+     xlab = "Iteration", ylab = "Binomial Loss")
+
+
+plot(fit_out$thetaEst)
+
+
+maxInt = 1000
+accelrt = TRUE
+fit_out_accelrt_correct <- sparseSmoothFit(dat, n.k=n.k, stepSize=stepSize,lambda1=lambda1, lambda2=lambda2, maxInt = maxInt,
+                                    epsilon = 1E-6, printDetail = FALSE, initTheta=initTheta, shrinkScale = shrinkScale,
+                                    accelrt = accelrt)
+
+#fit_out_accelrt # the usual line search for unaccelerated approach
+
+#fit_out_accelrt_correct # the line search for accelerated approach 
+
+plot(fit_out_accelrt_correct$lossSum[500:1000])
+
+points(fit_out_accelrt$lossVals[500:1000,1] + fit_out_accelrt$lossVals[500:1000,2], col = 3)
+
+points(fit_out$lossVals[500:1000,1]+fit_out$lossVals[500:1000,2], col = 2)
+
+plot(fit_out_accelrtF$lossVals[,1]+fit_out_accelrtF$lossVals[,2], type = "l", 
+     main= paste0("step size = ", stepSize, " MaxInt = ", maxInt),
+     xlab = "Iteration", ylab = "Binomial Loss")
+
 saveRDS(fit_out, "/mnt/GREENWOOD_JBOD1/GREENWOOD_SCRATCH/kaiqiong.zhao/Projects/
-        SOMNiBUS_SNP_selection/Rcpppackage/snpSOMNiBUS/tests/testthat/nSNP10noaccel.RDA")
+        SOMNiBUS_SNP_selection/Rcpppackage/snpSOMNiBUS/tests/testthat/nSNP10_10minus4.RDA")
+fit_outsmall = fit_out
+
+out0 <- smoothConstructExtract(n.k, dat$Position, constrains = T)
+out1 <- smoothConstructExtract(n.k, dat$Position, constrains = F)
+
+basisMat0 <- out0$basisMat
+basisMat1 <- out1$basisMat
+smoOmega1 <- out1$smoothOmegaCr
+sparOmega <- sparseOmegaCr(out1$myh, n.k, out1$matF) # the same for both intercept and non_intercept # Call a RCpp function
+numCovs <- ncol(dat) - 4
+designMat1 <- extractDesignMat1(numCovs, basisMat1, dat)
+
+mydesignMat <- cbind(basisMat0, designMat1[[1]], designMat1[[2]], 
+                     designMat1[[3]],designMat1[[4]], 
+                     designMat1[[5]], designMat1[[6]],
+                     designMat1[[7]],designMat1[[8]], 
+                     designMat1[[9]], designMat1[[10]])
+
+mydesignMatScaled <- mydesignMat
+mydesignMatScaled[,-1] <- scale(mydesignMat[,-1], scale = T)
+
+xtx <- t(mydesignMat) %*% mydesignMat
+max(eigen(xtx)$values)
+L = 1/max(eigen(xtx)$values)/4
+stepSize_threshold <- 1/L
+stepSize_threshold
+
+xtx <- t(mydesignMatScaled) %*% mydesignMatScaled
+max(eigen(xtx)$values)
+L = 1/max(eigen(xtx)$values)/4
+stepSize_threshold <- 1/L
+stepSize_threshold
+
+
+apply(mydesignMatScaled, 2, mean)
+apply(mydesignMatScaled, 2, sd)

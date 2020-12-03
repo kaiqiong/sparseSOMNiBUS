@@ -11,6 +11,7 @@
 # extract design matrix for beta1(t), ... betap(t)
 
 extractDesignMat1 <- function(numCovs, basisMat1, dat ){
+  
   lapply(seq_len(numCovs), function(i){(sweep(basisMat1, 1 ,dat[, paste0("X", i)], "*"  ))})
 }
 
@@ -23,20 +24,20 @@ binomObject <- function(theta,basisMat0, dat, n.k,numCovs,designMat1, truncation
   eps <- 10 * .Machine$double.eps
   #if (any(pi_ij > 1 - eps) || any(pi_ij < eps)) 
   #  message("fitted probabilities numerically 0 or 1 occurred")
-
- if(truncation){
-   pi_ij[which(pi_ij > 1 - eps)] <- 1 - eps
-   pi_ij[which(pi_ij < eps)] <- eps
- }
+  #pi_ij_trc <- pi_ij
+  if(truncation){
+    pi_ij[which(pi_ij > 1 - eps)] <- 1 - eps
+    pi_ij[which(pi_ij < eps)] <- eps
+  }
   theta.sep <- estimatePijOut$theta.sep
   
-
+  
   loglik_ij <- dat$Meth_Counts * log(pi_ij) +(dat$Total_Counts-dat$Meth_Counts)*log(1-pi_ij)
   
   #----------------------
- # if(truncation){
-#    loglik_ij[!is.finite(loglik_ij)] <- -10^20
-#  }
+  # if(truncation){
+  #    loglik_ij[!is.finite(loglik_ij)] <- -10^20
+  #  }
   #------------------------------
   #-2*sum(dbinom(x=dat$Meth_Counts, prob=pi_ij, size=dat$Total_Counts, log=T))
   neg2loglik <-  -2*sum(loglik_ij)
@@ -60,8 +61,12 @@ binomObject <- function(theta,basisMat0, dat, n.k,numCovs,designMat1, truncation
   
   gNeg2loglik <- -2*c(g0_now, as.vector(gRest))
   return(list(neg2loglik=neg2loglik, theta.sep = theta.sep,
-              gNeg2loglik=gNeg2loglik))
+              gNeg2loglik=gNeg2loglik, pi_ij=pi_ij))
 }
+
+
+
+
 
 
 getSeparateTheta <- function(theta, n.k, numCovs){
@@ -98,10 +103,10 @@ estimatePij <- function(theta,basisMat0, designMat1, dat, n.k, numCovs){
 }
 
 
-twoPenalties <- function(theta.sep,Hp, lambda1, numCovs, n.k){
- # theta.sep <- getSeparateTheta(theta, n.k, numCovs)
+twoPenalties <- function(theta.sep,lambda1, numCovs, n.k){
+  # theta.sep <- getSeparateTheta(theta, n.k, numCovs)
   squaredIndPen <- vapply(seq_len(numCovs), function(i){
-    sum(theta.sep[[i+1]] %*% Hp * theta.sep[[i+1]])
+    sum(theta.sep[[i+1]]* theta.sep[[i+1]])
   },1)
   penalTerm = lambda1 * sum(sqrt(squaredIndPen )) # no penalty on beta0(t)
   
@@ -111,8 +116,85 @@ twoPenalties <- function(theta.sep,Hp, lambda1, numCovs, n.k){
 #  return(list(fullObj = binom_out$neg2loglik + penal_out))
 #}
 
+# ssfit: an output from fitProxGradCpp()
+optimcheckOld <- function(ssfit, lambda1, Hp, nk,eqDelta= 10^-5, uneqDelta=10^-5){
+  
+  thetaSep <- ssfit$thetaEstSep[-1]
+  zeroCovs <- unlist(lapply( thetaSep, function(x){all(x==0)}))
+  indOptimRes <- rep(NA, length(zeroCovs))
+  
+  zeroCovid <- which(zeroCovs)
+  nonzeroCovid <- which(!zeroCovs)
+ 
+  
+  for(p in  nonzeroCovid ){
+    
+   ap = -ssfit$gNeg2loglik[(p*nk+1) :((p+1)*nk)]
+    
+   # ap =  2* t(designMat1[[p]]) %*% (dat$Meth_Counts-dat$Total_Counts*ssfit$pi_ij) 
+    
+  top = Hp %*% thetaSep[[p]]
+  denom =sqrt(sum(top * thetaSep[[p]] )) 
+  term2 = top/denom*lambda1
+  
+  indOptimRes[p]=sqrt(sum((ap - term2)^2)) <=eqDelta
+    
+  }
+  
+  for(p in zeroCovid){
+    ap = -ssfit$gNeg2loglik[(p*nk+1) :((p+1)*nk)]
+    
+    temp1 = Hp %*% ap
+   indOptimRes[p]= lambda1 -sqrt(sum(temp1*ap)) >= uneqDelta
+  }
+  return(indOptimRes)
+  
+  }
+#Hp <- (1-lambda2)* sparOmega + lambda2*smoOmega1
+#optimcheck(see2,lambda1=lambda1, Hp, nk = n.k)
 
 
+#@thetaTildaSep  estimate of theta_tilda from fitProxGradCpp()  fit1$thetaEstSep
+#@ gNeg2loglik  the gradient of negative twice log-likelihood, (w.r.t theta_tilda) fit1$gNeg2loglik
 
-
+optimcheck <- function(thetaTildaSep, gNeg2loglik, lambda1, Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5){
+  
+  # Note the output from fitProxGradCpp are theta_tilda not theta
+  
+  thetaSep <- thetaTildaSep[-1]
+  
+  thetaSep <- lapply(thetaSep, function(x){Linv %*% x })
+  
+  zeroCovs <- unlist(lapply( thetaSep, function(x){all(x==0)}))
+  indOptimRes <- rep(NA, length(zeroCovs))
+  
+  zeroCovid <- which(zeroCovs)
+  nonzeroCovid <- which(!zeroCovs)
+  
+  
+  for(p in  nonzeroCovid ){
+    
+    bp = -gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
+    
+    # ap =  2* t(designMat1[[p]]) %*% (dat$Meth_Counts-dat$Total_Counts*ssfit$pi_ij) 
+    
+    top = Hp %*% thetaSep[[p]]
+    denom =sqrt(sum(top * thetaSep[[p]] )) 
+    term2 = top/denom*lambda1
+    
+    indOptimRes[p]=sqrt(sum((ap - term2)^2)) <=eqDelta
+    
+  }
+  
+  for(p in zeroCovid){
+    bp = -gNeg2loglik[(p*nk+1) :((p+1)*nk)]; ap = t(L)%*% bp
+    
+    #ap =  2* t(designMat1[[p]]) %*% (dat$Meth_Counts-dat$Total_Counts*ssfit$pi_ij) 
+ 
+    temp1 = Hpinv %*% ap
+    indOptimRes[p]= lambda1 -sqrt(sum(temp1*ap)) >= uneqDelta
+  }
+  return(indOptimRes)
+  
+}
 

@@ -9,7 +9,7 @@ using namespace arma;
 // [[Rcpp::export]]
 arma::mat sparseOmegaCr (const arma::vec myh,
                         const int K,
-                        const arma::mat F
+                        const arma::mat matF
                           ){
   // initialize matrices A11 A12 A22 to 0
   arma::sp_mat A11(K, K) ;  
@@ -50,8 +50,8 @@ arma::mat sparseOmegaCr (const arma::vec myh,
     }
    
   }
-  arma::mat A12F = A12 * F;
+  arma::mat A12F = A12 * matF;
   arma::mat FtA12t = arma::trans(A12F);
-  arma::mat Omega1 = A11 + FtA12t + A12F + arma::trans(F) * A22* F;
+  arma::mat Omega1 = A11 + FtA12t + A12F + arma::trans(matF) * A22* matF;
   return(Omega1);
 }

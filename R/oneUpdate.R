@@ -4,6 +4,7 @@ oneUpdate <- function(theta, stepSize, lambda1, dat, basisMat0, n.k, Hp, numCovs
   binom_out <- binomObject(theta,basisMat0, dat, n.k,numCovs, designMat1)
   gBinomLoss <- binom_out$gNeg2loglik
   
+  
   new_out <- thetaUpdate(stepSize, theta, gBinomLoss, n.k, numCovs, lambda1, Hp, basisMat0, dat, designMat1, theta_m,
                          iter, accelrt)
   
@@ -78,28 +79,46 @@ oneUpdate <- function(theta, stepSize, lambda1, dat, basisMat0, n.k, Hp, numCovs
 #' @noRd
 # one theta update from the prox(theta_old - t gradient(theta_old))
 thetaUpdate <- function(stepSize, theta, gBinomLoss, n.k, numCovs, lambda1, Hp, basisMat0, dat, designMat1, 
-                        theta_m=NULL, iter,accelrt){
+                        theta_m=NULL, iter,accelrt, truncation=TRUE){
   if(accelrt){
     thetaInterm <- theta + (iter - 2)/(iter +1) *(theta-theta_m)
-    binom_outInterm <- binomObject(thetaInterm,basisMat0, dat, n.k,numCovs, designMat1)
+    binom_outInterm <- binomObject(thetaInterm,basisMat0, dat, n.k,numCovs, designMat1, truncation)
     theta_l <-  thetaInterm - stepSize * binom_outInterm$gNeg2loglik # based only on binomial -2loglik function (Loss)
   }else{
     theta_l <-  theta - stepSize * gBinomLoss # based only on binomial -2loglik function (Loss)
   }
   thetaL.sep <- getSeparateTheta(theta_l, n.k, numCovs)
+  
+  #theta_l_p_sepAll <-
+  #vapply(seq(nrow(gridIndex)), function(iii){
+  #  vapply(seq_len(numCovs+1), function(i){
+  #    if(i ==1){
+  #      thetaL.sep[[i]]
+  #    }else{
+  #      proximalOperator(t=stepSize, lambda1=lambda1[gridIndex[iii,1]], Hp=HpAll[,,gridIndex[iii,2]], u_p=thetaL.sep[[i]] )
+  #    }
+  #  },rep(1, n.k))
+  #}, matrix(1, nrow=n.k, ncol = numCovs+1) )
+  
   theta_l_p_sep <- vapply(seq_len(numCovs+1), function(i){
     if(i ==1){
       thetaL.sep[[i]]
     }else{
-      proximalOperator(t=stepSize, lambda1=lambda1, Hp=Hp, u_p=thetaL.sep[[i]] )
+      proximalOperator(t=stepSize, lambda1=lambda1, u_p=thetaL.sep[[i]] )
     }
   },rep(1, n.k))
+  
+  
   theta_l_proximal <- as.vector(theta_l_p_sep)
+
+  #theta_l_proximal <- as.vector(theta_l_p_sepAll[,,jj])
   
-  G_t_theta <- (theta - theta_l_proximal)/stepSize
-  
-  binom_out_new <- binomObject(theta_l_proximal,basisMat0, dat, n.k, numCovs, designMat1)
-  
+  if(accelrt){
+    G_t_theta <- (thetaInterm - theta_l_proximal)/stepSize
+  }else{
+   G_t_theta <- (theta - theta_l_proximal)/stepSize
+  }
+  binom_out_new <- binomObject(theta_l_proximal,basisMat0, dat, n.k, numCovs, designMat1, truncation)
   if(accelrt){
     return(list(binom_out_new=binom_out_new,G_t_theta = G_t_theta, 
                 theta_l_proximal=theta_l_proximal, thetaInterm=thetaInterm, binom_outInterm=binom_outInterm))
@@ -112,9 +131,9 @@ thetaUpdate <- function(stepSize, theta, gBinomLoss, n.k, numCovs, lambda1, Hp, 
 }
 
 
-proximalOperator <- function(t, lambda1, Hp, u_p){
+proximalOperator <- function(t, lambda1,  u_p){
   
-  threshold <-  as.numeric(1-t*lambda1/sqrt( sum( (u_p %*% Hp) * u_p)))
+  threshold <-  as.numeric(1-t*lambda1/sqrt( sum( u_p  * u_p)))
   if(threshold >= 0){
     return(threshold * u_p)
   }else{

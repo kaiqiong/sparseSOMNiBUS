@@ -23,7 +23,7 @@ getStart <- function(y, x, designMat1, Hp,Hp_inv, numCovs, basisMat0){
     mu_s[which(mu_s > 1 - eps)] <- 1 - eps
     mu_s[which(mu_s < eps)] <- eps
   }
-  neg2loglik_sat <- (-2)*sum(y*log(mu_s)+(x-dat$Meth_Counts)*log(1-mu_s))
+  neg2loglik_sat <- (-2)*sum(y*log(mu_s)+(x-y)*log(1-mu_s))
   
   list(nulldev = nulldev, mu= mu, lambda_max = lambda_max, neg2loglik_sat=neg2loglik_sat)
   
@@ -123,8 +123,14 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
     if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
     
   }
+  thetaMatOriginal <- 
+  vapply(seq(ulam), function(i){
+    unlist(lapply(getSeparateThetaCpp(thetaMat[,i], n.k, numCovs), function(x){Linv%*%x}))
+  }, FUN.VALUE = rep(1, myp))
   
-  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda))
+  
+  
+  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, thetaMatOriginal=thetaMatOriginal))
   
 }
 
@@ -136,29 +142,30 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
   myp = (numCovs+1)*n.k
   lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
   
-  
+  #---------------------------------
   # The sequence of lambda2 : ulam2
-  
+  #--------------------------------
   if (is.null(lam2)) {
     lambda_max <- 0.999
     # compute lambda sequence
-    ulam2 <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
-                    length.out = nlam2-1))
-    ulam2 <- c(ulam2, 0)
+    ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
+      #exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+      #             length.out = nlam2-1))
+    #ulam2 <- c(ulam2, 0)
   } else { # user provided lambda values
     user_lambda2 = TRUE
     if (any(lam2 < 0)) stop("lambdas should be non-negative")
     ulam2 = as.double(rev(sort(lam2)))
     nlam2 = as.integer(length(lam2))
   }
-  
+  #---------------------------------
   # The length of the sequence of lambda1: nlam or the length of provided lambda
-  
+  #--------------------------------
   if(!is.null(lambda)){
     nlam = as.integer(length(lambda))
   }
   
-  thetaOut <-  vector("list", nlam2)
+  thetaOutOri <- thetaOut <-  vector("list", nlam2)
   #thetaOut <-  array(NA, c(myp, nlam , nlam2))
   lamGrid <- matrix(NA, nrow = nlam, ncol = nlam2)
   #dimnames(lamGrid) <- list("lambda", "alpha")
@@ -175,6 +182,7 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
     
     #thetaOut[[i]] <- AllOut[[i]]$thetaMat
     thetaOut[[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMat,sparse = TRUE)
+    thetaOutOri [[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMatOriginal,sparse = TRUE)
     # thetaOut[,,i] <- AllOut[[i]]$thetaMat
     lamGrid[,i] <- AllOut[[i]]$ulam
   }
@@ -182,7 +190,7 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
   # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   
   
-  return(out = list(thetaOut=thetaOut, lamGrid= lamGrid, ulam2 = ulam2))
+  return(out = list(thetaOut=thetaOut, lamGrid= lamGrid, ulam2 = ulam2, thetaOutOri=thetaOutOri))
  
 }
 

@@ -54,7 +54,87 @@ getStart <- function(y, x, designMat1, Hp,Hp_inv, numCovs, basisMat0){
 #  nlam = as.integer(length(lambda))
 #}
 
-
+sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
+                             designMat1, lambda = NULL, nlam = 100, numCovs,
+                             maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE){
+  
+  Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
+  
+  #--- Matrix decomposition for Hp and calculate transformed design matrix
+  
+  L  = chol(Hp)
+  Hinv = chol2inv(L)
+  Linv = solve(L)
+  #Linv = MASS::ginv(L)
+  
+  basisMat0_tilda <- basisMat0 %*% Linv # this tilde does depend on L-- H -- lambda2, should be calculated for each lambda2
+  designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
+  
+  #-------------------
+  start_fit <-  getStart(y=dat$Meth_Counts, x=dat$Total_Counts, designMat1 , Hp, Hinv, numCovs, basisMat0)
+  myp = (numCovs+1)*n.k
+  lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
+  if (is.null(lambda)) {
+    if (lambda.min.ratio >= 1) stop("lambda.min.ratio should be less than 1")
+    
+    # compute lambda max: to add code here
+    lambda_max <- start_fit$lambda_max
+    
+    # compute lambda sequence
+    ulam <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+                    length.out = nlam))
+  } else { # user provided lambda values
+    user_lambda = TRUE
+    if (any(lambda < 0)) stop("lambdas should be non-negative")
+    ulam = as.double(rev(sort(lambda)))
+    nlam = as.integer(length(lambda))
+  }
+  
+  # Fit a sequence of 
+  
+  #lossVec <- rep(NA,nlam)
+  thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
+  #zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
+  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
+  gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
+  lamnow = ulam[1]+100000
+  
+  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat[,1:2], basisMat0_tilda, n.k,Hp,
+                         maxInt, epsilon, shrinkScale,
+                         accelrt, numCovs, designMat1_tilda, truncation)
+  
+  
+  #lossVec[1] <- fit1$lossSum
+  thetaMat[,1] <- fit1$thetaEst
+  gNeg2loglikTilda[,1]  <-  fit1$gNeg2loglik
+  
+  #zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+  #fit1$thetaEstSep
+  #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+  for( i in 2:length(ulam)){
+    
+    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,Hp,
+                           maxInt, epsilon, shrinkScale,
+                           accelrt, numCovs, designMat1_tilda, truncation)
+    thetaMat[,i] <- fit1$thetaEst
+    gNeg2loglikTilda[,i]  <-  fit1$gNeg2loglik
+    # checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+    
+    #zeroCovsBool[,i] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+    if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
+    
+  }
+  thetaMatOriginal <- 
+    vapply(seq(ulam), function(i){
+      unlist(lapply(getSeparateThetaCpp(thetaMat[,i], n.k, numCovs), function(x){Linv%*%x}))
+    }, FUN.VALUE = rep(1, myp))
+  
+  
+  
+  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
+                    thetaMatOriginal=thetaMatOriginal))
+  
+}
 
 
 sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
@@ -97,7 +177,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   #lossVec <- rep(NA,nlam)
   thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
-  #zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
+  zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
   lamnow = ulam[1]+100000
@@ -111,7 +191,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   thetaMat[,1] <- fit1$thetaEst
   gNeg2loglikTilda[,1]  <-  fit1$gNeg2loglik
   
-  #zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+  zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
   #fit1$thetaEstSep
   #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
@@ -123,7 +203,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
     gNeg2loglikTilda[,i]  <-  fit1$gNeg2loglik
    # checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
     
-    #zeroCovsBool[,i] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+    zeroCovsBool[,i] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
     if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
     
   }
@@ -135,7 +215,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   
   return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
-                    thetaMatOriginal=thetaMatOriginal))
+                    thetaMatOriginal=thetaMatOriginal,zeroCovsBool=zeroCovsBool))
   
 }
 
@@ -170,7 +250,7 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
     nlam = as.integer(length(lambda))
   }
   
-   thetaOutOri <- thetaOut <-  vector("list", nlam2)
+  zeroCovsBool<- thetaOutOri <- thetaOut <-  vector("list", nlam2)
   #thetaOut <-  array(NA, c(myp, nlam , nlam2))
   lamGrid <- matrix(NA, nrow = nlam, ncol = nlam2)
   
@@ -192,14 +272,14 @@ sparseSmoothGrid <- function(dat, n.k, lambda = NULL, nlam = 100, lam2 = NULL,  
     thetaOutOri [[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMatOriginal,sparse = TRUE)
     # thetaOut[,,i] <- AllOut[[i]]$thetaMat
     lamGrid[,i] <- AllOut[[i]]$ulam
-   # zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
+    zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
   }
   
   # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   
   
   return(out = list(thetaOut=thetaOut, lamGrid= lamGrid, ulam2 = ulam2,
-                    thetaOutOri=thetaOutOri))
+                    thetaOutOri=thetaOutOri, zeroCovsBool=zeroCovsBool))
  
 }
 

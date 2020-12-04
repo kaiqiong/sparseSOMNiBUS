@@ -212,10 +212,24 @@ time0= Sys.time()
 see1 = sparseSmoothPath(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                         designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
                         maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, 
-                        truncation = TRUE, eqDelta=0.01, uneqDelta=10^(-4))
+                        truncation = TRUE)
 print(Sys.time()-time0)
+#Time difference of 7.464239 mins
 
-
+time0= Sys.time()
+see1 = sparseSmoothPath(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
+                        designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
+                        maxInt = 200,  epsilon = 1E-6, shrinkScale,accelrt=FALSE, 
+                        truncation = TRUE)
+print(Sys.time()-time0)
+#Time difference of 15.15335 secs
+time0= Sys.time()
+see1 = sparseSmoothPath(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
+                        designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
+                        maxInt = 10^5,  epsilon = 1E-6, shrinkScale,accelrt=FALSE, 
+                        truncation = TRUE)
+print(Sys.time()-time0)
+#Time difference of 15.60009 secs
 #---Another case ---
 lambda = NULL
 nlam = 100
@@ -260,6 +274,18 @@ time0 = Sys.time()
 res_now = fitProxGradCppSeq(ulam, theta, stepSize, dat, basisMat0_tilda, n.k, Hp,
                         maxInt, epsilon, shrinkScale, accelrt, numCovs, designMat1_tilda, 
                         truncation,neg2loglikSat=start_fit$neg2loglik_sat)
+
+
+res_now1 = fitProxGradCppSeq(ulam, theta, stepSize, dat, basisMat0_tilda, n.k, Hp,
+                            maxInt, epsilon, shrinkScale, accelrt, numCovs, designMat1_tilda, 
+                            truncation,neg2loglikSat=start_fit$neg2loglik_sat)
+
+
+all.equal(res_now1$thetaMat, t(res_now$thetaMat) )
+
+
+all.equal(res_now1$gNeg2loglikTilda, t(res_now$gNeg2loglikTilda) )
+
 print(Sys.time()-time0)
 #Time difference of 5.576715 mins
 
@@ -352,7 +378,7 @@ see = microbenchmark(R = {
 },
 Rfun =sparseSmoothPath(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                        designMat1, basisMat1,  lambda , nlam = 100, numCovs,
-                       maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, 
+                       maxInt,  epsilon, shrinkScale,accelrt=FALSE, 
                        truncation = TRUE, eqDelta=0.01, uneqDelta=10^(-4))
 , times = 5 )
 library(ggplot2)
@@ -360,8 +386,10 @@ autoplot(see)
 see
 
 
+# The comparison is using different values of epsilon and maxInt make them comparable
 
-# A lot of overhead such that
+# True conclusion: No differences
+ 
 #--------
 # Compare .Call and directly fitProxGrad
 

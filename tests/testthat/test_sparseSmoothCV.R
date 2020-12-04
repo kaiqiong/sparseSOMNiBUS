@@ -11,6 +11,7 @@ n.snp <- ncol(dat)-4
 
 #library(sparseSOMNiBUS)
 source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFitPath.R")
+source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothPred.R")
 setwd("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/src")
 library(Rcpp)
 sourceCpp("sparseOmegaCr.cpp")
@@ -33,7 +34,7 @@ initTheta <- rnorm(n.k*(numCovs+1))
 stepSize=0.1
 shrinkScale=0.5
 
-maxInt = 500
+maxInt = 1000
 epsilon = 1E-6
 accelrt = TRUE
 truncation = TRUE
@@ -48,6 +49,8 @@ nfolds = 10
 
 dat <- dat[sample(1:nrow(dat), nrow(dat)),]
 foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
+
+
 
 for ( i in seq(nfolds)){
   
@@ -70,83 +73,57 @@ for ( i in seq(nfolds)){
   
   # Calculate the prediction
   
-  
-  for( ll in seq(nrow(gridIndex))){
-    trainFit <- fitProxGrad(theta=initTheta, stepSize=stepSize,lambda1=lambda1[gridIndex[ll,1]],
-                            dat=trainDat, basisMat0= initOut$basisMat0, n.k=n.k, 
-                            sparOmega= initOut$sparOmega, lambda2=lambda2[gridIndex[ll,2]], 
-                            smoOmega1=initOut$smoOmega1,
-                            maxInt = maxInt, epsilon = epsilon, printDetail = printDetail,shrinkScale=shrinkScale,
-                            accelrt=accelrt, numCovs=initOut$numCovs, designMat1= initOut$designMat1, basisMat1=initOut$basisMat1)
-    
-    pred = sparseSmoothPred(fit=trainFit,dat=testDat,n.k=n.k,lambda1=lambda1[gridIndex[ll,1]],lambda2=lambda2[gridIndex[ll,2]])
-    
-    outlist[[i]][[ll]] = c(trainFit, pred)
-    testLossOut[,i,gridIndex[ll,1],gridIndex[ll,2]]<-c(trainFit$lambda1, trainFit$lambda2, trainFit$nzeros, pred['testLoss'])
-    
-    pred
-  }
+  testPred <- sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat, basisMat0=initOut$basisMat0,
+                   basisMat1=initOut$basisMat1, n.k=n.k, numCovs=numCovs,truncation=truncation)
+
 }
 
-outlist <- as.list(seq(nfolds))
-for( i in seq(length(outlist))){
-  outlist[[i]] <-as.list(seq(length(lambda1)*length(lambda2)))
+
+
+i = 1
+i = i + 1
+points(log(trainFit$lamGrid[,i]),testPred[,i], col = i)
+
+plot(log(trainFit$lamGrid[,1]), testPred[,1], xlim = log(c(min(trainFit$lamGrid), max(trainFit$lamGrid))),
+     ylim = c(min(testPred), max(testPred)))
+for(i in 2:5){
+  points(log(trainFit$lamGrid[,i]), testPred[,i], col = i)
 }
 
-gridIndex <- expand.grid(seq(length(lambda1)),seq(length(lambda2)) )
+trainFit$ulam2
+apply(testPred, 2, min)
 
-testLossOut <- array(NA, dim= c(4, nfolds, length(lambda1), length(lambda2)),
-                     dimnames = list( c("lam1", "lam2", "nzeros", "testLoss"), paste0("Fold", seq(nfolds)),
-                                      paste0("lam1", lambda1), paste0("lam2", lambda2)))
+(lam2Min = which.min(apply(testPred, 2, min)))
+# 4
+(lamMin = which.min(testPred[,lam2Min])) 
+#15
 
-# step 1: Spline Basis Set up
-# calculate matrices: sparseOmega, smoothOmega1, basisMat0 (intercept), basisMat1 (for rest of covariates)
-# These matrices are fixed for fixed n.k and Position
-initOut = extractMats(dat=dat,n.k=n.k)
 
-basisMat0 <- initOut$basisMat0
-basisMat1 <- initOut$basisMat1
-sparOmega <- initOut$sparOmega
-smoOmega1 <- initOut$smoOmega1
-designMat1 <- initOut$designMat1
-#Hp <- (1-lambda2)* sparOmega + lambda2*smoOmega1
+# How about the results using the whole dataset
+initOutAll = extractMats(dat,n.k=n.k)
 
 
 
+bestFit <- sparseSmoothBest(theta=trainFit$thetaOut[[lam2Min]][, lamMin], stepSize,
+                 lambda2=trainFit$ulam2[lam2Min], dat=dat[,1:2], 
+                 initOutAll$basisMat0, n.k,
+                 initOutAll$sparOmega,initOutAll$smoOmega1,
+                 initOutAll$designMat1, lambda =trainFit$lamGrid[lamMin,lam2Min], nlam = 100, numCovs,
+                             maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE)
 
-stepSize=2
-theta_m <- theta <- initTheta <- rep(0, n.k*(ncol(dat)-3))
-shrinkScale=0.5
+fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = trainFit$lamGrid[15,4],
+                       dat[,1:2], basisMat0_tilda, n.k,Hp,
+                       maxInt, epsilon, shrinkScale,
+                       accelrt, numCovs, designMat1_tilda, truncation)
 
-maxInt = 200
-epsilon = 1E-6
-printDetail = FALSE
-accelrt = FALSE
+which.min(testPred[,1])
+which.min(testPred[,2])
+which.min(testPred[,3])
+which.min(testPred[,4])
+which.min(testPred[,5])
 
-iter = 4
-
-#sourceCpp("utils.cpp")
-#sourceCpp("updates.cpp")
-
-theta <- rnorm(length(theta))
-truncation= TRUE
-
-
-# Fit a sequence of lambda1
-
+which.min(apply(testPred, 2, min))
 
 
-#sourceCpp("sparseSmoothPath.cpp")
 
-out1 = sparseSmoothGrid(theta, stepSize, lam2 = NULL, nlam2 = 10, dat, basisMat0, n.k, sparOmega,smoOmega1,
-                        designMat1, basisMat1,  lambda = NULL, nlam = 100, numCovs,
-                        maxInt ,   epsilon , shrinkScale,accelrt=FALSE, 
-                        truncation = TRUE, mc.cores = 10)
-
-
-out1$ulam2
-
-
-out1$lamGrid[1,]
-
-out1$thetaOut
+min(testPred)

@@ -54,7 +54,7 @@ getStart <- function(y, x, designMat1, Hp,Hp_inv, numCovs, basisMat0){
 #  nlam = as.integer(length(lambda))
 #}
 
-sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
+sparseSmoothBest <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, sparOmega,smoOmega1,
                              designMat1, lambda = NULL, nlam = 100, numCovs,
                              maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE){
   
@@ -92,46 +92,15 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   
   # Fit a sequence of 
   
-  #lossVec <- rep(NA,nlam)
-  thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
-  #zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
-  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
-  gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
-  lamnow = ulam[1]+100000
   
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat[,1:2], basisMat0_tilda, n.k,Hp,
+  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,Hp,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
+  thetaMatOriginal <- lapply(fit1$thetaEstSep, function(x){as.vector(Linv%*%x)})
+  zeroCovsBool <- unlist(lapply( thetaMatOriginal[-1], function(x){all(x==0)}))
   
   
-  #lossVec[1] <- fit1$lossSum
-  thetaMat[,1] <- fit1$thetaEst
-  gNeg2loglikTilda[,1]  <-  fit1$gNeg2loglik
-  
-  #zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
-  #fit1$thetaEstSep
-  #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
-  for( i in 2:length(ulam)){
-    
-    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,Hp,
-                           maxInt, epsilon, shrinkScale,
-                           accelrt, numCovs, designMat1_tilda, truncation)
-    thetaMat[,i] <- fit1$thetaEst
-    gNeg2loglikTilda[,i]  <-  fit1$gNeg2loglik
-    # checkall[,i] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[i], Hp, L,Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
-    
-    #zeroCovsBool[,i] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
-    if(fit1$neg2loglik < start_fit$neg2loglik_sat) break
-    
-  }
-  thetaMatOriginal <- 
-    vapply(seq(ulam), function(i){
-      unlist(lapply(getSeparateThetaCpp(thetaMat[,i], n.k, numCovs), function(x){Linv%*%x}))
-    }, FUN.VALUE = rep(1, myp))
-  
-  
-  
-  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
+  return(out = list(fit1=fit1, zeroCovsBool= zeroCovsBool,
                     thetaMatOriginal=thetaMatOriginal))
   
 }
@@ -180,9 +149,14 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
   gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
-  lamnow = ulam[1]+100000
   
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1]+100000, dat[,1:2], basisMat0_tilda, n.k,Hp,
+  if(is.null(lambda)){
+  lamnow = ulam[1]+100000
+  }else{
+    lamnow = ulam[1]
+  }
+  
+  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = lamnow, dat[,1:2], basisMat0_tilda, n.k,Hp,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
   

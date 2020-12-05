@@ -79,8 +79,11 @@ theta <- rnorm(length(theta))
 #lambda2 = 1
 lambda2 = 0.5
 Hp <- (1-lambda2)* sparOmega + lambda2*smoOmega1
+L  = chol(Hp)
+Hinv = chol2inv(L)
+Linv = solve(L)
 
-startfit = getStart(dat$Meth_Counts, dat$Total_Counts, designMat1, Hp, numCovs, basisMat0)
+startfit = getStart(dat$Meth_Counts, dat$Total_Counts, designMat1, Hp, Hinv, numCovs, basisMat0)
 
 startfit$lambda_max
 
@@ -104,7 +107,9 @@ designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
 seeinit_correct_design= fitProxGradCpp(theta, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
                         epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda,  truncation)
 
-optimcheck(seeinit_correct_design,lambda1=lambda1, Hp,L, Linv,Hpinv=Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
+optimcheck(seeinit_correct_design$thetaEstSep,
+           seeinit_correct_design$gNeg2loglik,
+           lambda1=lambda1, Hp,L, Linv,Hpinv=Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 #optimcheck(seeinit,lambda1=lambda1, Hp,L, Linv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 
 
@@ -113,7 +118,7 @@ lambda1 = 130
 see2= fitProxGradCpp(seeinit_correct_design$thetaEst, stepSize,lambda1, dat, basisMat0_tilda, n.k, Hp, maxInt = 10^5,
                      epsilon = 1E-20, shrinkScale,accelrt, numCovs, designMat1_tilda, truncation)
 
-optimcheck(see2,lambda1=lambda1, Hp,L, Linv, Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
+optimcheck(see2$thetaEstSep, see2$gNeg2loglik,lambda1=lambda1, Hp,L, Linv, Hinv, nk = n.k, eqDelta = 10^-2,  uneqDelta = 10^-3 )
 #lambda1 = 4
 #see2R= fitProxGrad(seeinit$thetaEst, stepSize,lambda1, dat, basisMat0, n.k, sparOmega, lambda2, smoOmega1, maxInt = 10^3,
 #                     epsilon = 1E-20, printDetail = F, shrinkScale,accelrt, numCovs, designMat1, basisMat1)

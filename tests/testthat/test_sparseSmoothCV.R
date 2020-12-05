@@ -28,13 +28,13 @@ lambda = NULL
 nlam = 50
 
 lam2 = NULL
-nlam2 = 5
+nlam2 = 10
 
 initTheta <- rnorm(n.k*(numCovs+1))
 stepSize=0.1
 shrinkScale=0.5
 
-maxInt = 1000
+maxInt = 10^5
 epsilon = 1E-6
 accelrt = TRUE
 truncation = TRUE
@@ -43,12 +43,157 @@ mc.cores = 10
 nfolds = 10
 
 
+# Step 0: determine the grid of lambda1 and lambda2 for cross validation for the full dataset
+
+#1. a sequence of lambda2
+#2. generate corresponding Hp, L, Hinv, Linv and save them
+# save the tilda version of the design matrix as well
+#3. calculate lambda.max for lambda1
+
+
+
+
+myp = (numCovs+1)*n.k
+lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
+
+#---------------------------------
+# The sequence of lambda2 : ulam2
+#--------------------------------
+if (is.null(lam2)) {
+  lambda_max <- 1- 10^(-5)
+  # compute lambda sequence
+  #ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
+  
+  #ulam2 <-  1-exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+  #                   length.out = nlam2))
+  
+  ulam2 <- seq(0, lambda_max, length.out = nlam2)
+  
+  #ulam2 <- c(ulam2, 0)
+} else { # user provided lambda values
+  user_lambda2 = TRUE
+  if (any(lam2 < 0)) stop("lambdas should be non-negative")
+  ulam2 = as.double((sort(lam2)))
+  nlam2 = as.integer(length(lam2))
+}
+
+
+ulam2
+
+initOut = extractMats(dat,n.k=n.k)
+sparOmega = initOut$sparOmega
+smoOmega1 = initOut$smoOmega1
+designMat1 = initOut$designMat1
+basisMat0 = initOut$basisMat0
+
+#'@param ulam2 a sequence of lambda2
+getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, designMat1, basisMat0){
+  Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
+  
+  #--- Matrix decomposition for Hp and calculate transformed design matrix
+  
+  L  = chol(Hp)
+  Hinv = chol2inv(L)
+  Linv = solve(L)
+  #Linv = MASS::ginv(L)
+
+  start_fit <-  getStart(y=dat$Meth_Counts, x=dat$Total_Counts, designMat1 , Hp, Hinv, numCovs, basisMat0)
+  
+  myp = (numCovs+1)*n.k
+  lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
+  if (is.null(lambda)) {
+    if (lambda.min.ratio >= 1) stop("lambda.min.ratio should be less than 1")
+    
+    # compute lambda max: to add code here
+    lambda_max <- start_fit$lambda_max
+    
+    # compute lambda sequence
+    ulam <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
+                    length.out = nlam))
+  } else { # user provided lambda values
+    user_lambda = TRUE
+    if (any(lambda < 0)) stop("lambdas should be non-negative")
+    ulam = as.double(rev(sort(lambda)))
+    nlam = as.integer(length(lambda))
+  }
+  
+
+  return(out = list(Hp=Hp, Linv=Linv, start_fit=start_fit, ulam = ulam, nlam = nlam,
+                    L=L, Hinv =Hinv))
+    
+}
+
+getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
+  getSeqLam1Hp(lambda2=x,dat=dat[,1:2],
+             lambda=lambda, nlam=nlam, sparOmega=sparOmega, 
+             smoOmega1=smoOmega1, designMat1=designMat1,
+             basisMat0=basisMat0)
+})
+
+# extract the grid values for lambda1
+lamGrid= vapply(seq(ulam2), function(i){
+  getSeqLam1HpOut[[i]]$ulam
+}, FUN.VALUE =  rep(1, nlam))
+
+
+# Fit a grid of lambdas 
+
+AllOut = parallel::mclapply(seq(ulam2), function(i){
+  sparseSmoothPathRaw(dat, n.k, ulam=getSeqLam1HpOut[[i]]$ulam,
+                      lambda2=ulam2[i], Hp=getSeqLam1HpOut[[i]]$Hp, 
+                      Linv=getSeqLam1HpOut[[i]]$Linv, theta, stepSize, basisMat0, 
+                      designMat1,  numCovs, maxInt,  epsilon, shrinkScale,
+                      accelrt, truncation)
+}, mc.cores=mc.cores)
+
+zeroCovsBool<- thetaOutOri <- thetaOut <-  vector("list", nlam2)
+#thetaOut <-  array(NA, c(myp, nlam , nlam2))
+lamGrid1 <- matrix(NA, nrow = nlam, ncol = nlam2)
+for ( i in seq(ulam2)){
+  
+  #thetaOut[[i]] <- AllOut[[i]]$thetaMat
+  thetaOut[[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMat,sparse = TRUE)
+  thetaOutOri [[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMatOriginal,sparse = TRUE)
+  # thetaOut[,,i] <- AllOut[[i]]$thetaMat
+  lamGrid1[,i] <- AllOut[[i]]$ulam
+  zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
+}
+
+length(thetaOut)
+all.equal(lamGrid, lamGrid1)
+
+#----- optimcheck for the the Grid fit
+
+checkAlllam <-  vector("list", nlam2)
+
+for ( i in seq(ulam2)){
+ 
+  checkAlllam[[i]]<- 
+  vapply(1:nlam, function(j){
+    temp = getSeparateThetaCpp(thetaOut[[i]][,j], nk = n.k, numCovs)
+    optimcheck(temp, gNeg2loglik=AllOut[[i]]$gNeg2loglik[,j], lambda1=lamGrid[j,i], 
+               Hp=getSeqLam1HpOut[[i]]$Hp, 
+               L=getSeqLam1HpOut[[i]]$L, Linv=getSeqLam1HpOut[[i]]$Linv, 
+               Hpinv=getSeqLam1HpOut[[i]]$Hinv, nk=n.k,eqDelta= 0.01, uneqDelta=10^-5)
+  }, FUN.VALUE = rep(TRUE, numCovs))
+  
+  
+}
+
+# End of the check All
+#---------------
+thetaOut
+
+optimcheck(thetaTildaSep, gNeg2loglik, lambda1, 
+           Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5)
+
 # Step 1, CV fold
-
-
 
 dat <- dat[sample(1:nrow(dat), nrow(dat)),]
 foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
+
+
+
 
 
 

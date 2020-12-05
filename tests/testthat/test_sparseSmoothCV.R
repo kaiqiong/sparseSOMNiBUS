@@ -87,7 +87,7 @@ designMat1 = initOut$designMat1
 basisMat0 = initOut$basisMat0
 
 #'@param ulam2 a sequence of lambda2
-getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, designMat1, basisMat0){
+getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, designMat1, basisMat0, hugeCont =100000 ){
   Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
   
   #--- Matrix decomposition for Hp and calculate transformed design matrix
@@ -117,9 +117,9 @@ getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, d
     nlam = as.integer(length(lambda))
   }
   
-
+  ulam[1] = ulam[1]+hugeCont
   return(out = list(Hp=Hp, Linv=Linv, start_fit=start_fit, ulam = ulam, nlam = nlam,
-                    L=L, Hinv =Hinv))
+                    L=L, Hinv =Hinv ))
     
 }
 

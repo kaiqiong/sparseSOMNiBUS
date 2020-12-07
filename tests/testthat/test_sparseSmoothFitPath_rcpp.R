@@ -296,9 +296,9 @@ checkAlllam <- matrix(NA, nrow = nlam, ncol = numCovs)
 lamv <- ulam
 lamv[1]<- ulam[1]+100000
 for ( i in seq(length(ulam))){
-  thetaSep =  getSeparateThetaCpp(res_now$thetaMat[i,], n.k, numCovs)
+  thetaSep =  getSeparateThetaCpp(res_now$thetaMat[,i], n.k, numCovs)
   
-  checkAlllam[i,] <- optimcheck(thetaSep, res_now$gNeg2loglikTilda[i,], lamv[i], Hp, L, Linv, Hinv, n.k, eqDelta = 0.1, uneqDelta = 10^-5 )
+  checkAlllam[i,] <- optimcheck(thetaSep, res_now$gNeg2loglikTilda[,i], lamv[i], Hp, L, Linv, Hinv, n.k, eqDelta = 0.1, uneqDelta = 10^-5 )
 }
 
 

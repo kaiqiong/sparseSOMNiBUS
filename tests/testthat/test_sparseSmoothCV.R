@@ -12,6 +12,8 @@ n.snp <- ncol(dat)-4
 #library(sparseSOMNiBUS)
 source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFitPath.R")
 source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothPred.R")
+source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/utils.R")
+source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFit.R")
 setwd("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/src")
 library(Rcpp)
 sourceCpp("sparseOmegaCr.cpp")
@@ -25,7 +27,7 @@ n.k = 5
 numCovs = ncol(dat)-4
 
 lambda = NULL
-nlam = 50
+nlam = 100
 
 lam2 = NULL
 nlam2 = 10
@@ -78,7 +80,7 @@ if (is.null(lam2)) {
 }
 
 
-ulam2
+ulam2[6]<-0.5
 
 initOut = extractMats(dat,n.k=n.k)
 sparOmega = initOut$sparOmega
@@ -86,42 +88,7 @@ smoOmega1 = initOut$smoOmega1
 designMat1 = initOut$designMat1
 basisMat0 = initOut$basisMat0
 
-#'@param ulam2 a sequence of lambda2
-getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, designMat1, basisMat0, hugeCont =100000 ){
-  Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
-  
-  #--- Matrix decomposition for Hp and calculate transformed design matrix
-  
-  L  = chol(Hp)
-  Hinv = chol2inv(L)
-  Linv = solve(L)
-  #Linv = MASS::ginv(L)
 
-  start_fit <-  getStart(y=dat$Meth_Counts, x=dat$Total_Counts, designMat1 , Hp, Hinv, numCovs, basisMat0)
-  
-  myp = (numCovs+1)*n.k
-  lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
-  if (is.null(lambda)) {
-    if (lambda.min.ratio >= 1) stop("lambda.min.ratio should be less than 1")
-    
-    # compute lambda max: to add code here
-    lambda_max <- start_fit$lambda_max
-    
-    # compute lambda sequence
-    ulam <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
-                    length.out = nlam))
-  } else { # user provided lambda values
-    user_lambda = TRUE
-    if (any(lambda < 0)) stop("lambdas should be non-negative")
-    ulam = as.double(rev(sort(lambda)))
-    nlam = as.integer(length(lambda))
-  }
-  
-  ulam[1] = ulam[1]+hugeCont
-  return(out = list(Hp=Hp, Linv=Linv, start_fit=start_fit, ulam = ulam, nlam = nlam,
-                    L=L, Hinv =Hinv ))
-    
-}
 
 getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
   getSeqLam1Hp(lambda2=x,dat=dat[,1:2],
@@ -129,6 +96,10 @@ getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
              smoOmega1=smoOmega1, designMat1=designMat1,
              basisMat0=basisMat0)
 })
+
+
+
+
 
 # extract the grid values for lambda1
 lamGrid= vapply(seq(ulam2), function(i){
@@ -162,6 +133,14 @@ for ( i in seq(ulam2)){
 length(thetaOut)
 all.equal(lamGrid, lamGrid1)
 
+
+# 
+gridFit = sparseSmoothGridRaw(dat, n.k, ulam2, getSeqLam1HpOut, theta, stepSize, shrinkScale,
+                                basisMat0, sparOmega,smoOmega1, designMat1, numCovs,
+                                maxInt,  epsilon, accelrt, truncation,
+                                mc.cores)
+
+
 #----- optimcheck for the the Grid fit
 
 checkAlllam <-  vector("list", nlam2)
@@ -174,12 +153,14 @@ for ( i in seq(ulam2)){
     optimcheck(temp, gNeg2loglik=AllOut[[i]]$gNeg2loglik[,j], lambda1=lamGrid[j,i], 
                Hp=getSeqLam1HpOut[[i]]$Hp, 
                L=getSeqLam1HpOut[[i]]$L, Linv=getSeqLam1HpOut[[i]]$Linv, 
-               Hpinv=getSeqLam1HpOut[[i]]$Hinv, nk=n.k,eqDelta= 0.01, uneqDelta=10^-5)
+               Hpinv=getSeqLam1HpOut[[i]]$Hinv, nk=n.k,eqDelta= 10, uneqDelta=10^-5)
   }, FUN.VALUE = rep(TRUE, numCovs))
   
   
 }
+checkAlllam[[6]][,4]
 
+lamGrid[4,6]
 # End of the check All
 #---------------
 thetaOut
@@ -192,8 +173,22 @@ optimcheck(thetaTildaSep, gNeg2loglik, lambda1,
 dat <- dat[sample(1:nrow(dat), nrow(dat)),]
 foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
 
+initOut = extractMats(dat,n.k=n.k)
+#sparOmega = initOut$sparOmega
+#smoOmega1 = initOut$smoOmega1
+#designMat1 = initOut$designMat1
+#basisMat0 = initOut$basisMat0
 
 
+getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
+  getSeqLam1Hp(lambda2=x,dat=dat[,1:2],
+               lambda=lambda, nlam=nlam, sparOmega=initOut$sparOmega, 
+               smoOmega1=initOut$smoOmega1, designMat1=initOut$designMat1,
+               basisMat0=initOut$basisMat0)
+})
+lamGrid= vapply(seq(ulam2), function(i){
+  getSeqLam1HpOut[[i]]$ulam
+}, FUN.VALUE =  rep(1, nlam))
 
 
 
@@ -207,35 +202,37 @@ for ( i in seq(nfolds)){
   
   initOut = extractMats(dat=trainDat,n.k=n.k)
   
-
+  
   # Fit on the train dataset
   
-  trainFit <- sparseSmoothGrid(dat=trainDat[,1:2], n.k=n.k, lambda=lambda, nlam=nlam, lam2=lam2, nlam2=nlam2, 
+  trainFit <- sparseSmoothGridRaw(dat=trainDat[,1:2], n.k=n.k, ulam2, getSeqLam1HpOut, 
                                theta=initTheta, stepSize=stepSize, shrinkScale=shrinkScale,
-                   basisMat0=initOut$basisMat0, sparOmega=initOut$sparOmega,
-                   smoOmega1=initOut$smoOmega1, designMat1=initOut$designMat1, 
+                   basisMat0=initOut$basisMat0, designMat1=initOut$designMat1, 
                    numCovs=numCovs, maxInt=maxInt, epsilon=epsilon, accelrt=accelrt, truncation=truncation, mc.cores=mc.cores)
   
   # Calculate the prediction
   
-  testPred <- sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat, basisMat0=initOut$basisMat0,
-                   basisMat1=initOut$basisMat1, n.k=n.k, numCovs=numCovs,truncation=truncation)
+  testPred <- sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat,
+                               basisMat0=initOut$basisMat0,basisMat1=initOut$basisMat1, 
+                               n.k=n.k, numCovs=numCovs,truncation=truncation)
 
 }
 
 
+lamGridPlot = lamGrid
+lamGridPlot[1,] = lamGrid[1,]-100000
 
 i = 1
 i = i + 1
-points(log(trainFit$lamGrid[,i]),testPred[,i], col = i)
+points(log(lamGridPlot[,i]),testPred[,i], col = i)
 
-plot(log(trainFit$lamGrid[,1]), testPred[,1], xlim = log(c(min(trainFit$lamGrid), max(trainFit$lamGrid))),
+plot(log(lamGridPlot[,1]), testPred[,1], xlim = log(c(min(lamGridPlot), max(lamGridPlot))),
      ylim = c(min(testPred), max(testPred)))
-for(i in 2:5){
-  points(log(trainFit$lamGrid[,i]), testPred[,i], col = i)
+for(i in 2:10){
+  points(log(lamGridPlot[,i]), testPred[,i], col = i)
 }
 
-trainFit$ulam2
+ulam2
 apply(testPred, 2, min)
 
 (lam2Min = which.min(apply(testPred, 2, min)))
@@ -244,8 +241,12 @@ apply(testPred, 2, min)
 #15
 
 
+zeroCovsBool[[lam2Min]][,lamMin]
+
 # How about the results using the whole dataset
 initOutAll = extractMats(dat,n.k=n.k)
+
+
 
 
 
@@ -255,6 +256,12 @@ bestFit <- sparseSmoothBest(theta=trainFit$thetaOut[[lam2Min]][, lamMin], stepSi
                  initOutAll$sparOmega,initOutAll$smoOmega1,
                  initOutAll$designMat1, lambda =trainFit$lamGrid[lamMin,lam2Min], nlam = 100, numCovs,
                              maxInt = 10^5,  epsilon = 1E-20, shrinkScale,accelrt=FALSE, truncation = TRUE)
+
+bestFit <-fitProxGradCpp(theta=trainFit$thetaOut[[lam2Min]][, lamMin], intStepSize = stepSize,
+               lambda1 = lamGrid[lamMin,lam2Min],
+               dat[,1:2], basisMat0_tilda, n.k,Hp,
+               maxInt, epsilon, shrinkScale,
+               accelrt, numCovs, designMat1_tilda, truncation)
 
 fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = trainFit$lamGrid[15,4],
                        dat[,1:2], basisMat0_tilda, n.k,Hp,

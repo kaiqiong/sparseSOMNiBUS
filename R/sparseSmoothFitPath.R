@@ -230,7 +230,7 @@ sparseSmoothGridRaw <- function(dat, n.k, ulam2, getSeqLam1HpOut, theta, stepSiz
   
   
   zeroCovsBool<- thetaOutOri <- thetaOut <-  vector("list", nlam2)
- 
+  IterNum <- matrix(NA, ncol = nlam2, nrow = length(AllOut[[1]]$Iter ))
   for ( i in seq(ulam2)){
     
     #thetaOut[[i]] <- AllOut[[i]]$thetaMat
@@ -239,10 +239,14 @@ sparseSmoothGridRaw <- function(dat, n.k, ulam2, getSeqLam1HpOut, theta, stepSiz
     # thetaOut[,,i] <- AllOut[[i]]$thetaMat
     #lamGrid[,i] <- AllOut[[i]]$ulam
     zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
+    
+    IterNum[,i] <- AllOut[[i]]$Iter
   }
   
   return(out = list(thetaOut=thetaOut, 
-                    thetaOutOri=thetaOutOri, zeroCovsBool=zeroCovsBool))
+                    thetaOutOri=thetaOutOri, 
+                    zeroCovsBool=zeroCovsBool,
+                    IterNum=IterNum))
 }
 
 # Given the sequence of lambda1 -- ulam
@@ -375,8 +379,8 @@ sparseSmoothPathRawOneLam1 <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta,
   thetaMatOriginalSep <- getSeparateThetaCpp(thetaMatOriginal, n.k, numCovs)
   penalBetas <-  lapply(thetaMatOriginalSep[-1][!zeroCovsBool], function(x){basisMat1[uni_rows,]%*% x})
   
-  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
-                    thetaMatOriginal=thetaMatOriginal,zeroCovsBool=zeroCovsBool, Iter = Iter,
+  return(out = list(thetaMat=Matrix::Matrix(thetaMat, sparse=TRUE), ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
+                    thetaMatOriginal=Matrix::Matrix(thetaMatOriginal, sparse=TRUE),zeroCovsBool=zeroCovsBool, Iter = Iter,
                     penalBetas = penalBetas, uniqPos = uniqPos))
   
 }

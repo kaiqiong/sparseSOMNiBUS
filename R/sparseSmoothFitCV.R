@@ -101,6 +101,7 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   #--------------
   # Step 1, CV fold
   #----------------
+  
   dat <- dat[sample(1:nrow(dat), nrow(dat)),]
   foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
   
@@ -150,6 +151,11 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   
   bestLambda1 = lamGrid[bestInd]
   bestLambda2 = ulam2[bestInd[2]]
+  
+  
+  bestIndAllLam2 = apply(testPredMean, 2, which.min )
+  bestLambda1vec = lamGrid[cbind(bestIndAllLam2,seq(nlam2))]
+  
   }
   if(nlam2 == 1){
     bestInd = which(testPredMean == min(testPredMean), arr.ind = TRUE)
@@ -165,13 +171,31 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   initOut = extractMats(dat,n.k=n.k)
   
   if(nlam2 >1){
-  bestFit <- sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1, 
-                                        lambda2=bestLambda2, Hp=getSeqLam1HpOut[[bestInd[2]]]$Hp, 
-                                        Linv=getSeqLam1HpOut[[bestInd[2]]]$Linv, 
-                                        theta=trainAll[[1]]$thetaOut[[bestInd[2]]][, bestInd[1]], 
-                                        stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
-                                        numCovs, maxInt ,  epsilon , shrinkScale, 
-                                        accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
+    
+    # if a sequence of lam2 were given, report the bestFit for all lambda2
+    
+    
+  #bestFit <- sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1, 
+  #                                      lambda2=bestLambda2, Hp=getSeqLam1HpOut[[bestInd[2]]]$Hp, 
+  #                                      Linv=getSeqLam1HpOut[[bestInd[2]]]$Linv, 
+  #                                      theta=trainAll[[1]]$thetaOut[[bestInd[2]]][, bestInd[1]], 
+  #                                      stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
+  #                                      numCovs, maxInt ,  epsilon , shrinkScale, 
+  #                                      accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
+  
+  
+    bestFitAll <- parallel::mclapply(seq(ulam2), function(i){
+    sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1vec[i], 
+                               lambda2=ulam2[i], Hp=getSeqLam1HpOut[[i]]$Hp, 
+                              Linv=getSeqLam1HpOut[[i]]$Linv, 
+                               theta=trainAll[[1]]$thetaOut[[i]][,bestIndAllLam2[i]], 
+                               stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
+                               numCovs, maxInt ,  epsilon , shrinkScale, 
+                               accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
+  }, mc.cores=mc.cores)
+   
+   bestFit <- bestFitAll[[bestInd[2]]]
+  
   }
   if(nlam2 == 1){
     bestFit <- sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1, 
@@ -181,10 +205,18 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
                                           stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
                                           numCovs, maxInt ,  epsilon , shrinkScale, 
                                           accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
+    
   }
   
+  if(nlam2==1){
   return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
-                    ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2))
+                    ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
+                    bestInd=bestInd))
+  }else{
+    return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
+                      ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
+                      bestInd=bestInd, bestFitAll=bestFitAll)) 
+    }
 }
 
 

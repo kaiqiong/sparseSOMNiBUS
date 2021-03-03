@@ -321,6 +321,65 @@ sparseSmoothPathRaw <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta, stepSi
 
 
 
+sparseSmoothPathRawOneLam1 <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta, stepSize, basisMat0, 
+                                designMat1,  numCovs, maxInt = 10^5,  epsilon = 1E-20, shrinkScale,
+                                accelrt=FALSE, truncation = TRUE, basisMat1){
+  
+  basisMat0_tilda <- basisMat0 %*% Linv 
+  designMat1_tilda <- lapply(designMat1, function(x){x%*%Linv})
+  
+  # calculate the saturated
+  
+  neg2loglik_sat= getSatNeg2Loglik(y=dat$Meth_Counts, x=dat$Total_Counts)
+  
+  myp = (numCovs+1)*n.k
+  if (any(ulam < 0)) stop("lambdas should be non-negative")
+  ulam = as.double(rev(sort(ulam)))
+  nlam = as.integer(length(ulam))
+  
+  
+  thetaMat <- matrix(NA, nrow = myp, ncol = nlam )
+  zeroCovsBool <- matrix(NA, nrow = numCovs, ncol = nlam)
+  # checkall <- matrix(NA, nrow = numCovs, ncol =nlam)
+  gNeg2loglikTilda <- matrix(NA, nrow = myp, ncol =nlam);
+  
+  Iter <- rep(NA, nlam)
+  #if(wellDefinedSeq){
+  #  lamnow = ulam[1]+100000
+  #}else{
+  #  lamnow = ulam[1]
+  #}
+  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,Hp,
+                         maxInt, epsilon, shrinkScale,
+                         accelrt, numCovs, designMat1_tilda, truncation)
+  
+  
+  #lossVec[1] <- fit1$lossSum
+  thetaMat[,1] <- fit1$thetaEst
+  gNeg2loglikTilda[,1]  <-  fit1$gNeg2loglik
+  
+  zeroCovsBool[,1] <-unlist(lapply(fit1$thetaEstSep[-1], function(x){all(x==0)}))
+  
+  Iter[1] <- fit1$Iter
+  #fit1$thetaEstSep
+  #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
+
+  thetaMatOriginal <- unlist(lapply(getSeparateThetaCpp(thetaMat[,1], n.k, numCovs), function(x){Linv%*%x}))
+
+  uniqPos = unique(dat$Position)
+  
+  uni_rows <- match(uniqPos, dat$Position)
+  
+  #penalBetas <- basisMat1[uni_rows,]%*% thetaMatOriginal
+  
+  thetaMatOriginalSep <- getSeparateThetaCpp(thetaMatOriginal, n.k, numCovs)
+  penalBetas <-  lapply(thetaMatOriginalSep[-1][!zeroCovsBool], function(x){basisMat1[uni_rows,]%*% x})
+  
+  return(out = list(thetaMat=thetaMat, ulam= ulam, gNeg2loglik=gNeg2loglikTilda, 
+                    thetaMatOriginal=thetaMatOriginal,zeroCovsBool=zeroCovsBool, Iter = Iter,
+                    penalBetas = penalBetas, uniqPos = uniqPos))
+  
+}
 
 
 

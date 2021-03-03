@@ -1,4 +1,4 @@
-setwd("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/tests/testthat")
+setwd("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/tests/testthat")
 path_ref_data <- paste(paste(getwd(), "/data/", sep = ""), "datSnp5nsig1.RDS", sep = "")
 #load("/scratch/kaiqiong.zhao/Projects/SOMNiBUS_RE_Simu/functions/BANK1data.RData")
 #saveRDS(dat, path_ref_data  )
@@ -10,11 +10,11 @@ n.snp <- ncol(dat)-4
 
 
 #library(sparseSOMNiBUS)
-source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFitPath.R")
-source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothPred.R")
-source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/utils.R")
-source("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFit.R")
-setwd("~/scratch/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/src")
+source("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFitPath.R")
+source("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothPred.R")
+source("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/utils.R")
+source("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/R/sparseSmoothFit.R")
+setwd("/scratch/greenwood/kaiqiong.zhao/kaiqiong.zhao/Projects/SOMNiBUS_SNP_selection/Rcpppackage/sparseSOMNiBUS/src")
 library(Rcpp)
 sourceCpp("sparseOmegaCr.cpp")
 sourceCpp("utils.cpp")
@@ -42,7 +42,7 @@ accelrt = TRUE
 truncation = TRUE
 mc.cores = 10
 
-nfolds = 10
+nfolds = 5
 
 
 # Step 0: determine the grid of lambda1 and lambda2 for cross validation for the full dataset
@@ -80,98 +80,7 @@ if (is.null(lam2)) {
 }
 
 
-ulam2[6]<-0.5
-
-initOut = extractMats(dat,n.k=n.k)
-sparOmega = initOut$sparOmega
-smoOmega1 = initOut$smoOmega1
-designMat1 = initOut$designMat1
-basisMat0 = initOut$basisMat0
-
-
-
-getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
-  getSeqLam1Hp(lambda2=x,dat=dat[,1:2],
-             lambda=lambda, nlam=nlam, sparOmega=sparOmega, 
-             smoOmega1=smoOmega1, designMat1=designMat1,
-             basisMat0=basisMat0)
-})
-
-
-
-
-
-# extract the grid values for lambda1
-lamGrid= vapply(seq(ulam2), function(i){
-  getSeqLam1HpOut[[i]]$ulam
-}, FUN.VALUE =  rep(1, nlam))
-
-
-# Fit a grid of lambdas 
-
-AllOut = parallel::mclapply(seq(ulam2), function(i){
-  sparseSmoothPathRaw(dat, n.k, ulam=getSeqLam1HpOut[[i]]$ulam,
-                      lambda2=ulam2[i], Hp=getSeqLam1HpOut[[i]]$Hp, 
-                      Linv=getSeqLam1HpOut[[i]]$Linv, theta, stepSize, basisMat0, 
-                      designMat1,  numCovs, maxInt,  epsilon, shrinkScale,
-                      accelrt, truncation)
-}, mc.cores=mc.cores)
-
-zeroCovsBool<- thetaOutOri <- thetaOut <-  vector("list", nlam2)
-#thetaOut <-  array(NA, c(myp, nlam , nlam2))
-lamGrid1 <- matrix(NA, nrow = nlam, ncol = nlam2)
-for ( i in seq(ulam2)){
-  
-  #thetaOut[[i]] <- AllOut[[i]]$thetaMat
-  thetaOut[[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMat,sparse = TRUE)
-  thetaOutOri [[i]] <- Matrix::Matrix(AllOut[[i]]$thetaMatOriginal,sparse = TRUE)
-  # thetaOut[,,i] <- AllOut[[i]]$thetaMat
-  lamGrid1[,i] <- AllOut[[i]]$ulam
-  zeroCovsBool[[i]] <- AllOut[[i]]$zeroCovsBool
-}
-
-length(thetaOut)
-all.equal(lamGrid, lamGrid1)
-
-
-# 
-gridFit = sparseSmoothGridRaw(dat, n.k, ulam2, getSeqLam1HpOut, theta, stepSize, shrinkScale,
-                                basisMat0, sparOmega,smoOmega1, designMat1, numCovs,
-                                maxInt,  epsilon, accelrt, truncation,
-                                mc.cores)
-
-
-#----- optimcheck for the the Grid fit
-
-checkAlllam <-  vector("list", nlam2)
-
-for ( i in seq(ulam2)){
- 
-  checkAlllam[[i]]<- 
-  vapply(1:nlam, function(j){
-    temp = getSeparateThetaCpp(thetaOut[[i]][,j], nk = n.k, numCovs)
-    optimcheck(temp, gNeg2loglik=AllOut[[i]]$gNeg2loglik[,j], lambda1=lamGrid[j,i], 
-               Hp=getSeqLam1HpOut[[i]]$Hp, 
-               L=getSeqLam1HpOut[[i]]$L, Linv=getSeqLam1HpOut[[i]]$Linv, 
-               Hpinv=getSeqLam1HpOut[[i]]$Hinv, nk=n.k,eqDelta= 10, uneqDelta=10^-5)
-  }, FUN.VALUE = rep(TRUE, numCovs))
-  
-  
-}
-checkAlllam[[6]][,4]
-
-lamGrid[4,6]
-# End of the check All
-#---------------
-thetaOut
-
-optimcheck(thetaTildaSep, gNeg2loglik, lambda1, 
-           Hp, L, Linv, Hpinv, nk,eqDelta= 10^-5, uneqDelta=10^-5)
-
-# Step 1, CV fold
-
-dat <- dat[sample(1:nrow(dat), nrow(dat)),]
-foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
+#ulam2[6]<-0.5
 
 initOut = extractMats(dat,n.k=n.k)
 #sparOmega = initOut$sparOmega
@@ -192,6 +101,13 @@ lamGrid= vapply(seq(ulam2), function(i){
 
 
 
+#--------------
+# Step 1, CV fold
+#----------------
+dat <- dat[sample(1:nrow(dat), nrow(dat)),]
+foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
+
+trainAll <- testAll <- vector("list", nfolds)
 for ( i in seq(nfolds)){
   
   testID <- foldIndex[[i]]
@@ -215,9 +131,47 @@ for ( i in seq(nfolds)){
   testPred <- sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat,
                                basisMat0=initOut$basisMat0,basisMat1=initOut$basisMat1, 
                                n.k=n.k, numCovs=numCovs,truncation=truncation)
-
+  trainAll[[i]] =trainFit
+  testAll[[i]] = testPred
 }
 
+# Extract the estimated penalized coefficients
+
+
+
+dim(trainFit$thetaOutOri[[1]])
+
+
+uniqPos = unique(trainDat$Position)
+
+uni_rows <- match(uniqPos, trainDat$Position)
+
+dim(initOut$basisMat1[uni_rows,])
+
+penalBetas <- initOut$basisMat1[uni_rows,]%*%trainFit$thetaOutOri[[1]][6:10,]
+
+plot(uniqPos, penalBetas[,1])
+
+i = 1
+i = i + 1
+
+for( i in 2:100){
+  points(uniqPos,  penalBetas[,i], col = i)
+}
+
+points(pos, beta.1, col = 'dodgerblue')
+
+#which(trainDat$Position==trainDat$Position[500])
+
+
+#initOut$basisMat1[500,]==initOut$basisMat1[which(trainDat$Position==trainDat$Position[500])[11],]
+
+length(testAll)
+
+testAll[[1]]
+
+
+plot(lamGrid)
 
 lamGridPlot = lamGrid
 lamGridPlot[1,] = lamGrid[1,]-100000
@@ -279,3 +233,15 @@ which.min(apply(testPred, 2, min))
 
 
 min(testPred)
+
+which.min(testPred[1,])
+which.min(testPred[2,])
+which.min(testPred[3,])
+which.min(testPred[4,])
+which.min(testPred[5,])
+which.min(testPred[6,])
+which.min(testPred[7,])
+which.min(testPred[8,])
+which.min(testPred[9,])
+
+apply(testPred, 1, which.min)

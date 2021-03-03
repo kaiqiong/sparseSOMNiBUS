@@ -66,8 +66,12 @@ sparseSmoothPred <- function(trainFit, trainDatPos, testDat, basisMat0, basisMat
   
   
   nlam2 = length(trainFit$thetaOut)
-  nlam = lapply(trainFit$thetaOut, ncol)
   
+
+  nlam = lapply(trainFit$thetaOut, ncol)
+ 
+    
+  if(nlam2>1){
   lossvals <- 
   vapply(seq(nlam2), function(i){
     vapply(seq(nlam[[i]]), function(j){
@@ -78,6 +82,18 @@ sparseSmoothPred <- function(trainFit, trainDatPos, testDat, basisMat0, basisMat
       testOut$neg2loglik/nrow(testDat)
     }, FUN.VALUE = 1)
   }, FUN.VALUE = rep(1, nlam[[1]]))
+  }
+  
+  if(nlam2 ==1 ){
+    
+    lossvals= vapply(seq(nlam[[1]]), function(j){
+      
+      testOut <-binomObjectCpp(theta=trainFit$thetaOutOri[[1]][,j], basisMat0=basisMat0,dat=testDat[,1:2],nk=n.k,
+                               numCovs=numCovs,designMat1=designMat1, truncation=truncation 
+      )
+      testOut$neg2loglik/nrow(testDat)
+    }, FUN.VALUE = 1)
+  }
   
  return(lossvals)
   

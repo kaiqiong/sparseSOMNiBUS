@@ -195,6 +195,41 @@ List binomObjectCpp(const NumericVector& theta,
   // exporting pi_ij can be deleted later
   return(out);}
 
+// [[Rcpp::export]]
+List binomObjectLossOnlyCpp(const NumericVector& theta,
+                    const arma::mat& basisMat0, 
+                    const DataFrame& dat, 
+                    const int& nk,
+                    const int& numCovs,
+                    const List& designMat1, 
+                    const bool& truncation){ 
+  
+  List estimatePijOut= estimatePijCpp(theta, basisMat0, designMat1, nk, numCovs);
+  NumericVector pi_ij=estimatePijOut["pi_ij"];
+  double eps=getPrec(1) * 10;
+  
+  if(truncation==TRUE){
+    pi_ij[pi_ij > (1 - eps)] = 1 - eps;
+    pi_ij[pi_ij < eps] = eps;
+  }
+  List thetaSep=estimatePijOut["theta.sep"];
+  arma::vec meth=dat["Meth_Counts"];
+  arma::vec total=dat["Total_Counts"];
+  arma::vec unmeth= total-meth;
+  
+  arma::vec pi_ij_arma=pi_ij;
+  arma::vec pi_ij_arma_c=1-pi_ij;
+  arma::vec logpi=arma::log(pi_ij_arma);
+  arma::vec log1mpi=arma::log(pi_ij_arma_c);
+  
+  arma::vec loglik_ij = meth % logpi + unmeth % log1mpi;
+  
+  double neg2loglik =  (-2)*arma::sum(loglik_ij);
+ 
+  List out=List::create(Named("neg2loglik")=neg2loglik);
+  // exporting pi_ij can be deleted later
+  return(out);}
+
 
 // [[Rcpp::export]]
 List binomObjectCppRef(const NumericVector& theta,

@@ -31,6 +31,13 @@ List binomObjectCpp(const NumericVector& theta,
                     const List& designMat1, 
                     const bool& truncation);
 
+List binomObjectLossOnlyCpp(const NumericVector& theta,
+                            const arma::mat& basisMat0, 
+                            const DataFrame& dat, 
+                            const int& nk,
+                            const int& numCovs,
+                            const List& designMat1, 
+                            const bool& truncation);
 
 double twoPenaltiesCpp(List thetaSep,
                        double lambda1, 

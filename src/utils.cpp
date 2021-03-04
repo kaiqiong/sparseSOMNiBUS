@@ -225,8 +225,9 @@ List binomObjectLossOnlyCpp(const NumericVector& theta,
   arma::vec loglik_ij = meth % logpi + unmeth % log1mpi;
   
   double neg2loglik =  (-2)*arma::sum(loglik_ij);
- 
-  List out=List::create(Named("neg2loglik")=neg2loglik);
+  
+  List out=List::create(Named("neg2loglik")=neg2loglik,
+                        Named("theta.sep")=thetaSep);
   // exporting pi_ij can be deleted later
   return(out);}
 

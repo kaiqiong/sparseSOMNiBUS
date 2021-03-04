@@ -78,7 +78,6 @@ List thetaUpdateCpp(const double& stepSize,
                     const int& nk,
                     const int& numCovs, 
                     const double& lambda1, 
-                    const arma::mat& Hp, 
                     const arma::mat& basisMat0, 
                     const DataFrame& dat, 
                     const List& designMat1,
@@ -114,7 +113,7 @@ List thetaUpdateCpp(const double& stepSize,
   } 
   NumericVector  G_t_theta = (theta - theta_l_proximal)/stepSize;
   
-  List binom_out_new = binomObjectCpp(theta_l_proximal,basisMat0, dat, nk, numCovs, designMat1, truncation);
+  List binom_out_new = binomObjectLossOnlyCpp(theta_l_proximal,basisMat0, dat, nk, numCovs, designMat1, truncation);
   
   List out=List::create(Named("binom_out_new")=binom_out_new,
                         Named("G_t_theta")= G_t_theta, 
@@ -133,7 +132,6 @@ List oneUpdateCpp(const NumericVector& theta,
                const DataFrame& dat,
                const arma::mat& basisMat0,
                const int& nk,
-               const arma::mat& Hp, 
                const int& numCovs,
                const double& shrinkScale,
                const List& designMat1, 
@@ -145,7 +143,7 @@ List binom_out = binomObjectCpp(theta,basisMat0, dat, nk,numCovs, designMat1, tr
 arma::vec  gBinomLoss = binom_out["gNeg2loglik"];
 NumericVector gBinomLossNum = Rcpp::NumericVector(gBinomLoss.begin(), gBinomLoss.end());
 List new_out = thetaUpdateCpp(stepSize,theta, gBinomLossNum,
-                          nk, numCovs, lambda1, Hp,
+                          nk, numCovs, lambda1,
                           basisMat0, dat,designMat1,theta_m,
                        iter, accelrt,truncation);
 //if(accelrt ==TRUE){
@@ -165,7 +163,7 @@ List new_out = thetaUpdateCpp(stepSize,theta, gBinomLossNum,
     while(shrinkCondi == TRUE){
       stepSize=stepSize*shrinkScale;
       new_out = thetaUpdateCpp(stepSize,theta, gBinomLossNum,
-                               nk, numCovs, lambda1, Hp,
+                               nk, numCovs, lambda1,
                                basisMat0, dat,designMat1,theta_m,
                                iter, accelrt,truncation);
       Gttheta = new_out["G_t_theta"];

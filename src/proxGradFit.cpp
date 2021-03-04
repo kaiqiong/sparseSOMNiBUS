@@ -10,6 +10,12 @@ using namespace arma;
 #include "updates.h"
 
 
+
+
+
+
+
+
 // [[Rcpp::export]]
 
 List fitProxGradCpp(NumericVector& theta, 
@@ -18,7 +24,6 @@ List fitProxGradCpp(NumericVector& theta,
                     const DataFrame& dat, 
                     const arma::mat& basisMat0, 
                     const int& nk, 
-                    const arma::mat& Hp, 
                     const double& maxInt,
                     const double& epsilon,
                     const double& shrinkScale,
@@ -40,7 +45,7 @@ List fitProxGradCpp(NumericVector& theta,
   
   NumericVector stepSizeVec(maxInt+1);
   //-- for --test//
-  List out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk, Hp,  numCovs, shrinkScale, 
+  List out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk,   numCovs, shrinkScale, 
                         designMat1,theta, iter, accelrt, truncation);
   
   NumericVector theta_new = out["theta_l_proximal"];
@@ -71,7 +76,7 @@ List fitProxGradCpp(NumericVector& theta,
    lossSumOld = lossSum;
    theta = theta_new;
  
-   out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk, Hp,  numCovs, shrinkScale, 
+   out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk,  numCovs, shrinkScale, 
                      designMat1,theta, iter, accelrt, truncation);
    theta_new=out["theta_l_proximal"];
  
@@ -115,7 +120,7 @@ List fitProxGradCpp(NumericVector& theta,
   //  theta = theta_new;
  // } while(tol > epsilon & iter < maxInt);
   
-  NumericVector gNeg2loglik= binom_out_new["gNeg2loglik"];
+  //NumericVector gNeg2loglik= binom_out_new["gNeg2loglik"];
   
  
                                                                         
@@ -125,7 +130,7 @@ List fitProxGradCpp(NumericVector& theta,
                         Named("thetaEstSep") = theta_l_proximal_sep,
                       //  Named("pi_ij")=pi_ij,
                         Named("Iter") = iter,
-                        Named("gNeg2loglik")=gNeg2loglik,
+                    //    Named("gNeg2loglik")=gNeg2loglik,
                         Named("stepSizeVec") = stepSizeVec);
   return(output);
         
@@ -160,7 +165,7 @@ List fitProxGradCppold(NumericVector& theta,
   // arma::mat thetaMat(maxInt+10, theta.length());
   
   //-- for --test//
-  List out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk, Hp,  numCovs, shrinkScale, 
+  List out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk,  numCovs, shrinkScale, 
                         designMat1,theta, iter, accelrt, truncation);
   
   NumericVector theta_new = out["theta_l_proximal"];
@@ -180,7 +185,7 @@ List fitProxGradCppold(NumericVector& theta,
     
     
     
-    out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk, Hp,  numCovs, shrinkScale, 
+    out=oneUpdateCpp(theta, intStepSize, lambda1, dat, basisMat0, nk,   numCovs, shrinkScale, 
                      designMat1,theta, iter, accelrt, truncation);
     theta_new=out["theta_l_proximal"];
     

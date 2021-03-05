@@ -132,9 +132,61 @@ List new_out = thetaUpdateCpp(stepSize,theta, gBinomLossNum,
   
   // calculate the lossval under the new theta_l_proximal --- this is the left hand side of checking condition
   
+  // NumericVector pi_ij_now = estimatePijCpp(theta_l_p_sep,basisMat0, designMat1, numCovs,truncation);
+  //  double newloss = binomObjectCpp(pi_ij_now,dat);
   
-  NumericVector pi_ij_now = estimatePijCpp(theta_l_p_sep,basisMat0, designMat1, numCovs,truncation);
-  double newloss = binomObjectCpp(pi_ij_now,dat);
+  
+  
+  // -- get rid of calling functions here
+  
+  //---estimatePijCpp
+  int myrows=basisMat0.n_rows;
+  int size=numCovs+1;
+  arma::mat lpSep(myrows,size);
+  
+  arma::vec a = theta_l_p_sep[0];
+  lpSep.col(0) =  basisMat0 * a; 
+  
+  for (int i=1; i < size; ++i){
+    
+    arma::vec b = theta_l_p_sep[i];
+    
+    arma::mat designNow = designMat1[i-1];
+    
+    lpSep.col(i) = designNow * b;
+    
+  }
+  
+  arma::vec lp_ij  = arma::sum(lpSep,1);
+  
+  arma::vec pi_ij = 1/(1+trunc_exp(-lp_ij));
+  
+  NumericVector  pi_ij_now =NumericVector(pi_ij.begin(), pi_ij.end());
+  
+  double eps=getPrec(1) * 10;
+  if(truncation==TRUE){
+    pi_ij_now[ pi_ij_now > (1 - eps)] = 1 - eps;
+    pi_ij_now[ pi_ij_now < eps] = eps;
+  }
+  
+  //---done
+  
+  //---binomObjectCpp 
+  arma::vec meth=dat["Meth_Counts"];
+  arma::vec total=dat["Total_Counts"];
+  arma::vec unmeth= total-meth;
+  
+  arma::vec pi_ij_arma=pi_ij_now;
+  arma::vec pi_ij_arma_c=1-pi_ij_now;
+  arma::vec logpi=arma::log(pi_ij_arma);
+  arma::vec log1mpi=arma::log(pi_ij_arma_c);
+  
+  arma::vec loglik_ij = meth % logpi + unmeth % log1mpi;
+  
+  double newloss =  (-2)*arma::sum(loglik_ij);
+  
+  //--done
+ 
   
   double innerdot1 = std::inner_product(gBinomLossNum.begin(), gBinomLossNum.end(), Gttheta.begin(), 0.0);
   double innerdot2 = std::inner_product(Gttheta.begin(), Gttheta.end(), Gttheta.begin(), 0.0);
@@ -149,9 +201,61 @@ List new_out = thetaUpdateCpp(stepSize,theta, gBinomLossNum,
       Gttheta = new_out["G_t_theta"];
       
       theta_l_p_sep=new_out("theta_l_p_sep");
-      pi_ij_now = estimatePijCpp(theta_l_p_sep,basisMat0, designMat1, numCovs,truncation);
-      newloss = binomObjectCpp(pi_ij_now,dat);
       
+      
+      
+      //----- Expand this two lines of code
+      
+      
+     // pi_ij_now = estimatePijCpp(theta_l_p_sep,basisMat0, designMat1, numCovs,truncation);
+    //  newloss = binomObjectCpp(pi_ij_now,dat);
+      
+      // -- ----------------//
+      
+      //---estimatePijCpp
+    
+      
+      arma::vec aa = theta_l_p_sep[0];
+      lpSep.col(0) =  basisMat0 * aa; 
+      
+      for (int i=1; i < size; ++i){
+        
+        arma::vec bb = theta_l_p_sep[i];
+        
+        arma::mat designNow = designMat1[i-1];
+        
+        lpSep.col(i) = designNow * bb;
+        
+      }
+      
+       lp_ij  = arma::sum(lpSep,1);
+      
+       pi_ij = 1/(1+trunc_exp(-lp_ij));
+      
+        pi_ij_now =NumericVector(pi_ij.begin(), pi_ij.end());
+      
+      if(truncation==TRUE){
+        pi_ij_now[ pi_ij_now > (1 - eps)] = 1 - eps;
+        pi_ij_now[ pi_ij_now < eps] = eps;
+      }
+      
+      //---done
+      
+      //---binomObjectCpp 
+      
+      pi_ij_arma=pi_ij_now;
+      pi_ij_arma_c=1-pi_ij_now;
+      logpi=arma::log(pi_ij_arma);
+      log1mpi=arma::log(pi_ij_arma_c);
+      
+      loglik_ij = meth % logpi + unmeth % log1mpi;
+      
+      double newloss =  (-2)*arma::sum(loglik_ij);
+      
+      //--done
+      
+      
+      //--------------------//
       
       double innerdot1 = std::inner_product(gBinomLossNum.begin(), gBinomLossNum.end(), Gttheta.begin(), 0.0);
       double innerdot2 = std::inner_product(Gttheta.begin(), Gttheta.end(), Gttheta.begin(), 0.0);

@@ -111,7 +111,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
     lamnow = ulam[1]
   }
   
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = lamnow, dat[,1:2], basisMat0_tilda, n.k,Hp,
+  fit1 <- fitProxGradCppClean(theta, intStepSize = stepSize, lambda1 = lamnow, dat[,1:2], basisMat0_tilda, n.k,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
   
@@ -125,7 +125,7 @@ sparseSmoothPath <- function(theta, stepSize, lambda2=0.5, dat, basisMat0, n.k, 
   #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
     
-    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,Hp,
+    fit1 <- fitProxGradCppClean(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,
                            maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
     thetaMat[,i] <- fit1$thetaEst
@@ -283,7 +283,7 @@ sparseSmoothPathRaw <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta, stepSi
   #}else{
   #  lamnow = ulam[1]
   #}
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,Hp,
+  fit1 <- fitProxGradCppClean(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
   
@@ -299,7 +299,7 @@ sparseSmoothPathRaw <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta, stepSi
   #checkall[,1] <-  optimcheck(fit1$thetaEstSep, fit1$gNeg2loglik, ulam[1], Hp, L, Linv, Hpinv = Hinv, n.k, eqDelta, uneqDelta )
   for( i in 2:length(ulam)){
     
-    fit1 <- fitProxGradCpp(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,Hp,
+    fit1 <- fitProxGradCppClean(fit1$thetaEst, intStepSize = stepSize, lambda1 = ulam[i], dat[,1:2], basisMat0_tilda, n.k,
                            maxInt, epsilon, shrinkScale,
                            accelrt, numCovs, designMat1_tilda, truncation)
     thetaMat[,i] <- fit1$thetaEst
@@ -353,7 +353,9 @@ sparseSmoothPathRawOneLam1 <- function(dat, n.k, ulam, lambda2, Hp, Linv, theta,
   #}else{
   #  lamnow = ulam[1]
   #}
-  fit1 <- fitProxGradCpp(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,Hp,
+  
+
+  fit1 <- fitProxGradCppClean(theta, intStepSize = stepSize, lambda1 = ulam[1], dat[,1:2], basisMat0_tilda, n.k,
                          maxInt, epsilon, shrinkScale,
                          accelrt, numCovs, designMat1_tilda, truncation)
   

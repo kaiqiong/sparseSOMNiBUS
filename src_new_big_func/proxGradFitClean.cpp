@@ -229,10 +229,10 @@ List fitProxGradCppClean(NumericVector& theta,
   
   List output=List::create(Named("thetaEst")=theta_new, 
                          //  Named("lossSum")=lossSum,
-                         // Named("neg2loglik")=lossnew,
+                          Named("neg2loglik")=lossnew,
                            Named("thetaEstSep") = theta_new_sep,
                            Named("Iter") = iter,
-                           Named("gNeg2loglik")=gBinomLossNum
+                          Named("gNeg2loglik")=gBinomLossNum
                           // Named("stepSizeVec") = stepSizeVec
                              );
   return(output);

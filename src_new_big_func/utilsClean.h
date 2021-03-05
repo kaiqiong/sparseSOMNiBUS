@@ -25,13 +25,7 @@ NumericVector estimatePijCpp(const List& thetaSep,
                     const int& numCovs,
                     const bool& truncation);
 
-List binomObjectLossOnlyCpp(const NumericVector& theta,
-                            const arma::mat& basisMat0, 
-                            const DataFrame& dat, 
-                            const int& nk,
-                            const int& numCovs,
-                            const List& designMat1, 
-                            const bool& truncation);
+
 
 double binomObjectCpp(const NumericVector& pi_ij,
                       const DataFrame& dat);
@@ -46,8 +40,9 @@ double twoPenaltiesCpp(List thetaSep,
                        double lambda1, 
                        int numCovs, 
                        int nk);
-List estimatePijCpp1(const NumericVector& theta,
-                     const arma::mat& basisMat0, 
-                     const List& designMat1, 
-                     const int& nk, 
-                     const int& numCovs);
+List binomObjectCppLossOnly(const List& thetaSep,
+                                     const arma::mat& basisMat0, 
+                                     const List& designMat1,
+                                     const int& numCovs,
+                                     const bool& truncation,
+                                     const DataFrame& dat);

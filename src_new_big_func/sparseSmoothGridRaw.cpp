@@ -84,15 +84,15 @@ List sparseSmoothGridRawCpp(const arma::mat& lamGrid,
     thetaOri(span(0, nk-1)) = tt * nowsep;
     
     for(int ll=0; ll<numCovs; ++ll){
-      arma::mat nowsep = temp1sep[ll+1];
+      arma::vec nowsep = temp1sep[ll+1];
       
       thetaOri(span((ll+1)*nk,(ll+2)*nk-1 )) =tt * nowsep;
     }
     
     
     
-    thetaMat.subcube(0,0,ii, myp,0,ii) = temp1;
-    thetaMatOriginal.subcube(0,0,ii, myp,0,ii) = thetaOri;
+    thetaMat.subcube(0,0,ii, myp-1,0,ii) = temp1;
+    thetaMatOriginal.subcube(0,0,ii, myp-1,0,ii) = thetaOri;
     
     
     for (int i=1; i < nlam; ++i){
@@ -101,8 +101,8 @@ List sparseSmoothGridRawCpp(const arma::mat& lamGrid,
                                  maxInt, epsilon, shrinkScale,
                                  accelrt, numCovs, designMat1_tilda,  truncation);
       
-      arma::vec temp1 = fit1["thetaEst"];  // estimate of theta_tilda
-      arma::vec thetaOri(myp); // the estimate of the original theta
+      arma::vec temp1 = newInt;  // estimate of theta_tilda
+    //  arma::vec thetaOri(myp); // the estimate of the original theta
       
       List temp1sep = fit1["thetaEstSep"];
       
@@ -110,7 +110,7 @@ List sparseSmoothGridRawCpp(const arma::mat& lamGrid,
       thetaOri(span(0, nk-1)) = tt * nowsep;
       
       for(int ll=0; ll<numCovs; ++ll){
-        arma::mat nowsep = temp1sep[ll+1];
+        arma::vec nowsep = temp1sep[ll+1];
         
         thetaOri(span((ll+1)*nk,(ll+2)*nk-1 )) =tt * nowsep;
       }
@@ -118,8 +118,8 @@ List sparseSmoothGridRawCpp(const arma::mat& lamGrid,
       
       
       
-      thetaMat.subcube(0,i,ii, myp,i,ii) = temp1;
-      thetaMatOriginal.subcube(0,i,ii, myp,i,ii) = thetaOri;
+      thetaMat.subcube(0,i,ii, myp-1,i,ii) = temp1;
+      thetaMatOriginal.subcube(0,i,ii, myp-1,i,ii) = thetaOri;
       
       double val1 = fit1["neg2loglik"];
       

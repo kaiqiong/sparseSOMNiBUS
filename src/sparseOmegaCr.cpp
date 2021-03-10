@@ -7,9 +7,9 @@ using namespace Rcpp;
 using namespace arma;
 
 // [[Rcpp::export]]
-arma::mat sparseOmegaCr (const arma::vec myh,
-                        const int K,
-                        const arma::mat matF
+arma::mat sparseOmegaCr (const arma::vec& myh,
+                        const int& K,
+                        const arma::mat& matF
                           ){
   // initialize matrices A11 A12 A22 to 0
   arma::sp_mat A11(K, K) ;  

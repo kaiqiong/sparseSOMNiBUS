@@ -4,52 +4,17 @@
 
 
 
-#'@param ulam2 a sequence of lambda2
-#'
-getSeqLam1Hp <- function(lambda2,dat, lambda=NULL, nlam, sparOmega, smoOmega1, designMat1, basisMat0, hugeCont =100000 ){
-  Hp <- (1-lambda2)*sparOmega + lambda2*smoOmega1 # H1 <- lambda2*smoOmega0
-  
-  #--- Matrix decomposition for Hp and calculate transformed design matrix
-  
-  L  = chol(Hp)
-  Hinv = chol2inv(L)
-  Linv = solve(L)
-  #Linv = MASS::ginv(L)
-  
-  start_fit <-  getStart(y=dat$Meth_Counts, x=dat$Total_Counts, 
-                         designMat1=designMat1 , 
-                         Hp=Hp,Hp_inv=Hinv, numCovs=numCovs, basisMat0=basisMat0)
-  
-  myp = (numCovs+1)*n.k
-  lambda.min.ratio = ifelse(nrow(dat)<myp,0.01,0.0001)
-  if (is.null(lambda)) {
-    if (lambda.min.ratio >= 1) stop("lambda.min.ratio should be less than 1")
-    
-    # compute lambda max: to add code here
-    lambda_max <- start_fit$lambda_max
-    
-    # compute lambda sequence
-    ulam <- exp(seq(log(lambda_max), log(lambda_max * lambda.min.ratio),
-                    length.out = nlam))
-  } else { # user provided lambda values
-    user_lambda = TRUE
-    if (any(lambda < 0)) stop("lambdas should be non-negative")
-    ulam = as.double(rev(sort(lambda)))
-    nlam = as.integer(length(lambda))
-  }
-  
-  ulam[1] = ulam[1]+hugeCont
-  return(out = list(Hp=Hp, Linv=Linv, start_fit=start_fit, ulam = ulam, nlam = nlam,
-                    L=L, Hinv =Hinv ))
-  
-}
-
-
-
 
 sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100, lam2 = NULL, nlam2 = 10, maxInt = 500,
                               epsilon = 1E-6, printDetail = TRUE, initTheta, shrinkScale=0.5,
-                              accelrt = TRUE, nfolds = 5, mc.cores){
+                              accelrt = TRUE, nfolds = 5, mc.cores,hugeCont =100000){
+  
+  # shuffle the rows of dat for creating random fold for CV
+  dat <- dat[sample(1:nrow(dat), nrow(dat)),]
+  
+  
+  meth <- dat$Meth_Counts
+  total <- dat$Total_Counts
   
   numCovs = ncol(dat)-4
   myp = (numCovs+1)*n.k
@@ -59,7 +24,7 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   # The sequence of lambda2 : ulam2
   #--------------------------------
   if (is.null(lam2)) {
-    lambda_max <- 1- 10^(-3)
+    lambda_max <- 1- 10^(-2)
     # compute lambda sequence
     #ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
     
@@ -77,71 +42,97 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   }
   
   
-  #ulam2[6]<-0.5
-  
   initOut = extractMats(dat,n.k=n.k)
   #sparOmega = initOut$sparOmega
   #smoOmega1 = initOut$smoOmega1
   #designMat1 = initOut$designMat1
   #basisMat0 = initOut$basisMat0
-  
+  #-------------------------------------
+  # Generate the sequence of lambda1 :
+  # also need the matrix Linv
+  #--------------------------------
   
   getSeqLam1HpOut = lapply(as.list(ulam2), function(x){
-    getSeqLam1Hp(lambda2=x,dat=dat[,1:2],
+    getSeqLam1Hp(lambda2=x, meth, total,
                  lambda=lambda, nlam=nlam, sparOmega=initOut$sparOmega, 
                  smoOmega1=initOut$smoOmega1, designMat1=initOut$designMat1,
-                 basisMat0=initOut$basisMat0)
+                 basisMat0=initOut$basisMat0, hugeCont = hugeCont)
   })
+  
   lamGrid= vapply(seq(ulam2), function(i){
     getSeqLam1HpOut[[i]]$ulam
   }, FUN.VALUE =  rep(1, nlam))
   
+  LinvList= lapply(seq(ulam2), function(i){
+    getSeqLam1HpOut[[i]]$Linv
+  })
   
   
   #--------------
   # Step 1, CV fold
   #----------------
   
-  dat <- dat[sample(1:nrow(dat), nrow(dat)),]
-  foldIndex <-caret::createFolds(dat$Meth_Counts/dat$Total_Counts, k = nfolds)
+
+  foldIndex <-caret::createFolds(meth/total, k = nfolds)
   
-  trainAll <- testAll <- vector("list", nfolds)
-  for ( i in seq(nfolds)){
-    
-    testID <- foldIndex[[i]]
-    #trainID <- setdiff(1:nrow(dat), foldIndex[[i]])
-    
+ # trainAll <- testAlldev <- vector("list", nfolds)
+ # testAllmse <- testAlldev
+  
+  
+  AllOut = parallel::mclapply(seq(nfolds), function(ijk){
+    testID <- foldIndex[[ijk]]
     trainDat<-dat[-testID,]
     testDat <- dat[testID,]
     
     initOutTrain = extractMats(dat=trainDat,n.k=n.k)
     
-    
-    # Fit on the train dataset
-    
-    trainFit <- sparseSmoothGridRaw(dat=trainDat[,1:2], n.k=n.k, ulam2, getSeqLam1HpOut, 
+    trainFit <- sparseSmoothGridRaw(meth = trainDat$Meth_Counts,
+                                    total= trainDat$Total_Counts ,n.k=n.k, ulam2, lamGrid, LinvList, 
                                     theta=initTheta, stepSize=stepSize, shrinkScale=shrinkScale,
                                     basisMat0=initOutTrain$basisMat0, designMat1=initOutTrain$designMat1, 
-                                    numCovs=numCovs, maxInt=maxInt, epsilon=epsilon, accelrt=accelrt, truncation=truncation, mc.cores=mc.cores)
+                                    numCovs=numCovs, maxInt=maxInt, epsilon=epsilon, accelrt=accelrt,
+                                    truncation=truncation, mc.cores=mc.cores)
     
     # Calculate the prediction
     
-    testPred <- sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat,
+    testPred = sparseSmoothPred(trainFit=trainFit,trainDatPos=trainDat$Position,testDat=testDat,
                                  basisMat0=initOutTrain$basisMat0,basisMat1=initOutTrain$basisMat1, 
                                  n.k=n.k, numCovs=numCovs,truncation=truncation)
-    trainAll[[i]] =trainFit
-    testAll[[i]] = testPred
-  }
+    
+   list(testPred, trainFit$thetaOut)
+
+  }, mc.cores=mc.cores)
   
+  
+  if(nlam2==1){
+    testAlldev =  lapply(seq(nfolds), function(i){
+      AllOut[[i]][[1]][1,]
+    }) 
+    
+    testAllmse =  lapply(seq(nfolds), function(i){
+      AllOut[[i]][[1]][2,]
+    }) 
+  }else{
+  
+  testAlldev =  lapply(seq(nfolds), function(i){
+    AllOut[[i]][[1]][1,,]
+  }) 
+  
+  testAllmse =  lapply(seq(nfolds), function(i){
+    AllOut[[i]][[1]][2,,]
+  }) 
+}
+  
+ 
   
   # What to export from the cv function
   # best lambda2, best lambda1
   
   #1. calculate the cross validation average/SD matrix of testPred
   
-  testPredMean = Reduce("+", testAll) / length(testAll)
+  testPredMean = Reduce("+", testAlldev) / length(testAlldev)
   
-  testPredSD = apply(simplify2array(testAll), 1:2, sd )
+  testPredSD = apply(simplify2array(testAlldev), 1:2, sd )
   
   
   #which(testPredMean == min(testPredMean), arr.ind = TRUE)
@@ -159,7 +150,7 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   }
   if(nlam2 == 1){
     bestInd = which(testPredMean == min(testPredMean), arr.ind = TRUE)
-    bestLambda1 = lamGrid[bestInd]
+    bestLambda1 = lamGrid[bestInd,1]
     bestLambda2 = ulam2
   }
   
@@ -168,7 +159,7 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   #Hp1 =  (1-bestLambda2)*initOut$sparOmega + bestLambda2*initOut$smoOmega1
   #see1 = getSeqLam1HpOut[[bestInd[2]]]$Hp
   
-  initOut = extractMats(dat,n.k=n.k)
+  #initOut = extractMats(dat,n.k=n.k)
   
   if(nlam2 >1){
     
@@ -186,9 +177,8 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   
     bestFitAll <- parallel::mclapply(seq(ulam2), function(i){
     sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1vec[i], 
-                               lambda2=ulam2[i], Hp=getSeqLam1HpOut[[i]]$Hp, 
-                              Linv=getSeqLam1HpOut[[i]]$Linv, 
-                               theta=trainAll[[1]]$thetaOut[[i]][,bestIndAllLam2[i]], 
+                              Linv=LinvList[[i]], 
+                               theta=AllOut[[1]][[2]][[i]][,bestIndAllLam2[i]], 
                                stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
                                numCovs, maxInt ,  epsilon , shrinkScale, 
                                accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
@@ -199,9 +189,8 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   }
   if(nlam2 == 1){
     bestFit <- sparseSmoothPathRawOneLam1(dat[,1:3], n.k, ulam= bestLambda1, 
-                                          lambda2=bestLambda2, Hp=getSeqLam1HpOut[[1]]$Hp, 
-                                          Linv=getSeqLam1HpOut[[1]]$Linv, 
-                                          theta=trainAll[[1]]$thetaOut[[1]][, bestInd[1]], 
+                                          Linv=LinvList[[1]], 
+                                          theta=AllOut[[1]][[2]][[1]][, bestInd[1]], 
                                           stepSize, basisMat0=initOut$basisMat0, designMat1=initOut$designMat1,
                                           numCovs, maxInt ,  epsilon , shrinkScale, 
                                           accelrt=FALSE, truncation = TRUE, basisMat1 = initOut$basisMat1)
@@ -211,11 +200,11 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   if(nlam2==1){
   return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
                     ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
-                    bestInd=bestInd))
+                    bestInd=bestInd, testAlldev, testAllmse))
   }else{
     return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
                       ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
-                      bestInd=bestInd, bestFitAll=bestFitAll)) 
+                      bestInd=bestInd, bestFitAll=bestFitAll, testAlldev, testAllmse)) 
     }
 }
 

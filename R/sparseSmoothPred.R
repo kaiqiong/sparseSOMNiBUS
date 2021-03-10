@@ -64,6 +64,9 @@ sparseSmoothPred <- function(trainFit, trainDatPos, testDat, basisMat0, basisMat
   # 1, loss function value / number of observations
   # 2, mean prediction errors
   
+  meth = testDat$Meth_Counts
+  total = testDat$Total_Counts
+  unmeth = total - meth
   
   nlam2 = length(trainFit$thetaOut)
   
@@ -75,24 +78,25 @@ sparseSmoothPred <- function(trainFit, trainDatPos, testDat, basisMat0, basisMat
   lossvals <- 
   vapply(seq(nlam2), function(i){
     vapply(seq(nlam[[i]]), function(j){
-      
-      testOut <-binomObjectLossOnlyCpp(theta=trainFit$thetaOutOri[[i]][,j], basisMat0=basisMat0,dat=testDat[,1:2],nk=n.k,
-                               numCovs=numCovs,designMat1=designMat1, truncation=truncation 
+
+      testOut <-binomObjectCppLossOnlyVec(theta=trainFit$thetaOutOri[[i]][,j], basisMat0=basisMat0,
+                               numCovs=numCovs,designMat1=designMat1, truncation=truncation, meth, unmeth,total, nk = n.k 
                                )
-      testOut$neg2loglik/nrow(testDat)
-    }, FUN.VALUE = 1)
-  }, FUN.VALUE = rep(1, nlam[[1]]))
+
+      c(testOut$neg2loglik/nrow(testDat), testOut$sqrt_of_sum_of_dif/nrow(testDat))
+    }, FUN.VALUE = rep(0.0, 2))
+  }, FUN.VALUE = matrix(1, nrow = 2, ncol =  nlam[[1]]))
   }
   
   if(nlam2 ==1 ){
     
     lossvals= vapply(seq(nlam[[1]]), function(j){
       
-      testOut <-binomObjectLossOnlyCpp(theta=trainFit$thetaOutOri[[1]][,j], basisMat0=basisMat0,dat=testDat[,1:2],nk=n.k,
+      testOut <-binomObjectCppLossOnlyVec(theta=trainFit$thetaOutOri[[1]][,j], basisMat0=basisMat0,meth, unmeth,total,nk=n.k,
                                numCovs=numCovs,designMat1=designMat1, truncation=truncation 
       )
-      testOut$neg2loglik/nrow(testDat)
-    }, FUN.VALUE = 1)
+      c(testOut$neg2loglik/nrow(testDat), testOut$sqrt_of_sum_of_dif/nrow(testDat))
+    }, FUN.VALUE = rep(0.0, 2))
   }
   
  return(lossvals)

@@ -3,11 +3,11 @@
 
 
 
-
+#'@param tollam2  1- tollam2 is the largested value for alpha
 
 sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100, lam2 = NULL, nlam2 = 10, maxInt = 500,
                               epsilon = 1E-6, printDetail = TRUE, initTheta, shrinkScale=0.5,
-                              accelrt = TRUE, nfolds = 5, mc.cores,hugeCont =100000){
+                              accelrt = TRUE, nfolds = 5, mc.cores,hugeCont =100000,tollam2=0.01){
   
   # shuffle the rows of dat for creating random fold for CV
   dat <- dat[sample(1:nrow(dat), nrow(dat)),]
@@ -24,7 +24,7 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   # The sequence of lambda2 : ulam2
   #--------------------------------
   if (is.null(lam2)) {
-    lambda_max <- 1- 10^(-2)
+    lambda_max <- 1- tollam2
     # compute lambda sequence
     #ulam2 <- seq(lambda_max, lambda_max*lambda.min.ratio, length.out = nlam2)
     
@@ -200,11 +200,11 @@ sparseSmoothFitCV <- function(dat, n.k, stepSize=0.1, lambda = NULL, nlam = 100,
   if(nlam2==1){
   return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
                     ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
-                    bestInd=bestInd, testAlldev, testAllmse))
+                    bestInd=bestInd, testAlldev=testAlldev, testAllmse=testAllmse))
   }else{
     return(out = list(bestFit = bestFit,testPredMean=testPredMean,testPredSD=testPredSD,
                       ulam2=ulam2, lamGrid=lamGrid, bestLambda1=bestLambda1, bestLambda2=bestLambda2,
-                      bestInd=bestInd, bestFitAll=bestFitAll, testAlldev, testAllmse)) 
+                      bestInd=bestInd, bestFitAll=bestFitAll, testAlldev=testAlldev, testAllmse=testAllmse)) 
     }
 }
 

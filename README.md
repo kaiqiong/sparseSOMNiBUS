@@ -42,10 +42,10 @@ Two commonly used selection rules are implemented:
 - **λ_1SE** — the largest λ within one standard error of the minimum, providing a more parsimonious model.
 
 <p align="center">
-  <img src="src/sparseSOMNiBUS_illustration_100SNPs.pdf" width="600"/>
+  <img src="src/path.png" width="600"/>
 </p>
 
-[View coefficient-path figure (PDF)](src/sparseSOMNiBUS_illustration_100SNPs.pdf)
+
 
 *Figure: Example of penalized regression tuning in `sparseSOMNiBUS`.  
 Cross-validation selects the optimal λ via the minimum mean deviance (λ_min) and the 1-SE rule (λ_1SE)*

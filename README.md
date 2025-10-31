@@ -32,10 +32,10 @@ The figure below illustrates the `sparseSOMNiBUS` analysis pipeline, showing:
 
 ## 📈 Model fitting and tuning parameter selection
 
-`sparseSOMNiBUS` fits a penalized regression model that balances **model smoothness** and **sparsity** through  tuning parameters \( \lambda \) and \( \alpha \).
+`sparseSOMNiBUS` fits a penalized regression model that balances **model smoothness** and **sparsity** through the tuning parameters *λ* (penalty strength) and *α* (mixing parameter).
 The penalty encourages sparse, smoothly varying effects across CpG sites, allowing only a subset of SNPs to exhibit nonzero functional influence.
 
-To select \( \lambda \), the package uses **K-fold cross-validation** and evaluates the **mean validation deviance** over a grid of candidate λ values.
+To select *λ*, the package uses **K-fold cross-validation** and evaluates the **mean validation deviance** over a grid of candidate λ values.
 Two commonly used selection rules are implemented:
 
 - **λ_min** — the value of λ that minimizes the mean validation deviance;  

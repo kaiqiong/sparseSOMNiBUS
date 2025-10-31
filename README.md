@@ -54,9 +54,10 @@ Cross-validation selects the optimal λ via the minimum mean deviance (λ_min) a
 
 ## 📄 Citation
 
-If you use sparseSOMNiBUS in your research, please cite the following paper:
+If you use **sparseSOMNiBUS** in your research, please cite:
 
-Zhao K, Yang AY, Oualkacha K, Zeng Y, Klein K, Hudson M, Colmegna I, Bernatsky S, Greenwood CMT.
-A novel high-dimensional model for identifying regional DNA methylation QTLs.
-Biostatistics, Volume 26, Issue 1, 2025, kxaf032.
-https://doi.org/10.1093/biostatistics/kxaf032
+> Zhao K, Yang AY, Oualkacha K, Zeng Y, Klein K, Hudson M, Colmegna I, Bernatsky S, Greenwood CMT.  
+> *A novel high-dimensional model for identifying regional DNA methylation QTLs.*  
+> *Biostatistics*, Volume 26, Issue 1, 2025, kxaf032.  
+> [https://doi.org/10.1093/biostatistics/kxaf032](https://doi.org/10.1093/biostatistics/kxaf032)
+

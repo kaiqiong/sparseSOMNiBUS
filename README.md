@@ -15,7 +15,7 @@ The figure below illustrates the `sparseSOMNiBUS` analysis pipeline, showing:
 3. Summary of SNP–region associations across candidate variants.
 
 <p align="center">
-  <img src="docs/figure1_overview.png" width="800"/>
+  <img src="src/overview.png" width="800"/>
 </p>
 
 ---
@@ -42,7 +42,7 @@ Two commonly used selection rules are implemented:
 - **λ_1SE** — the largest λ within one standard error of the minimum, providing a more parsimonious model.
 
 <p align="center">
-  <img src="sparseSOMNiBUS_illustration_100SNPs.pdf" width="600"/>
+  <img src="src/sparseSOMNiBUS_illustration_100SNPs.pdf" width="600"/>
 </p>
 
 *Figure: Example of penalized regression tuning in `sparseSOMNiBUS`.  

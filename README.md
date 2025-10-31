@@ -45,8 +45,10 @@ Two commonly used selection rules are implemented:
   <img src="src/sparseSOMNiBUS_illustration_100SNPs.pdf" width="600"/>
 </p>
 
+[View coefficient-path figure (PDF)](src/sparseSOMNiBUS_illustration_100SNPs.pdf)
+
 *Figure: Example of penalized regression tuning in `sparseSOMNiBUS`.  
-Cross-validation selects the optimal λ via the minimum mean deviance (λ_min) and the 1-SE rule (λ_1SE), as illustrated in Supplementary Figure S1 of Zhao *et al.* (2025).*
+Cross-validation selects the optimal λ via the minimum mean deviance (λ_min) and the 1-SE rule (λ_1SE)*
 
 ---
 

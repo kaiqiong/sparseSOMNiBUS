@@ -23,8 +23,8 @@ The figure below illustrates the `sparseSOMNiBUS` analysis pipeline, showing:
 ## ⚙️ Key Features
 
 - **Joint regional modeling** of all CpGs and SNPs within a locus  
-- **Sparse functional coefficients** estimated via penalized spline expansion  
-- **Statistical inference** for SNP–region associations (mQTL mapping)  
+- **Sparse functional coefficients** estimated via penalized likelihood with a sparsity-smoothness pently
+- **Variable selection and effect estimation** for SNP–region associations (mQTL mapping)  
 - **Biologically interpretable** smooth effects across CpG sites  
 
 
